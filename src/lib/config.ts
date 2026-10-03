@@ -4,6 +4,10 @@ export type ChainNetwork = "eip155:421614" | "eip155:42161";
 export const USDC_ARBITRUM_SEPOLIA = "0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d";
 /** Circle native USDC on Arbitrum One. */
 export const USDC_ARBITRUM_ONE = "0xaf88d065e77c8cC2239327C5EDb3A432268e5831";
+/** Paxos Global Dollar (USDG, EIP-3009) on Arbitrum Sepolia. */
+export const USDG_ARBITRUM_SEPOLIA = "0xFFC95faa3d63Cde504a05B567C600B78C0b41892";
+/** Paxos Global Dollar (USDG, EIP-3009) on Arbitrum One. */
+export const USDG_ARBITRUM_ONE = "0x004B506865409877C9fA29bfb1ebA929984B9bbC";
 
 type ChainPreset = {
   label: string;
@@ -11,6 +15,7 @@ type ChainPreset = {
   explorerBase: string;
   token: string;
   tokenSymbol: string;
+  usdg: string;
   /** EIP-712 domain of the settle token — must match the contract's name()/version(). */
   tokenEip712Name: string;
   tokenEip712Version: string;
@@ -24,6 +29,7 @@ export const CHAIN_PRESETS: Record<ChainNetwork, ChainPreset> = {
     explorerBase: "https://sepolia.arbiscan.io",
     token: USDC_ARBITRUM_SEPOLIA,
     tokenSymbol: "USDC",
+    usdg: USDG_ARBITRUM_SEPOLIA,
     tokenEip712Name: "USD Coin",
     tokenEip712Version: "2",
     nativeSymbol: "ETH",
@@ -34,6 +40,7 @@ export const CHAIN_PRESETS: Record<ChainNetwork, ChainPreset> = {
     explorerBase: "https://arbiscan.io",
     token: USDC_ARBITRUM_ONE,
     tokenSymbol: "USDC",
+    usdg: USDG_ARBITRUM_ONE,
     tokenEip712Name: "USD Coin",
     tokenEip712Version: "2",
     nativeSymbol: "ETH",
@@ -83,13 +90,20 @@ export const config = {
   tokenDecimals: Number(env("TOKEN_DECIMALS", "6")),
   tokenEip712Name: env("TOKEN_EIP712_NAME", preset.tokenEip712Name),
   tokenEip712Version: env("TOKEN_EIP712_VERSION", preset.tokenEip712Version),
+  /** Paxos USDG on the active chain (EIP-3009, domain "Global Dollar" / "1"). */
+  usdgAddress: env("USDG_ADDRESS", preset.usdg),
   /**
-   * Optional second settle asset for multi-merchant demos (full build).
-   * Defaults to the primary settle token; set ALT_SETTLE_TOKEN to a different
-   * EIP-3009 ERC-20 when you have liquidity for that asset.
+   * Second settle asset for multi-asset SKUs. Defaults to Paxos USDG; set
+   * ALT_SETTLE_TOKEN to any other EIP-3009 ERC-20 allowlisted on the checkout.
    */
-  altSettleToken: env("ALT_SETTLE_TOKEN", preset.token),
-  altSettleSymbol: env("ALT_SETTLE_SYMBOL", preset.tokenSymbol),
+  altSettleToken: env("ALT_SETTLE_TOKEN", preset.usdg),
+  altSettleSymbol: env("ALT_SETTLE_SYMBOL", "USDG"),
+  /**
+   * BorneoCheckout contract. When set, x402 payments are settled through it
+   * (order-bound ReceiveWithAuthorization, on-chain fee split and XPoints).
+   * When empty, payments go straight to the merchant via transferWithAuthorization.
+   */
+  checkoutAddress: env("CHECKOUT_ADDRESS", "").trim(),
   /**
    * Uniswap has no real liquidity on Arbitrum Sepolia. When settling there,
    * show a live quote from Arbitrum One instead. Quote only: swaps are never
@@ -156,6 +170,23 @@ export const config = {
     "0x00000000000000000000000000000000000000fe",
   ),
 };
+
+/** EIP-712 domain name/version for an EIP-3009 settle token. */
+export function eip712DomainFor(asset: string, symbol: string) {
+  const a = asset.toLowerCase();
+  if (a === config.tokenAddress.toLowerCase()) {
+    return { name: config.tokenEip712Name, version: config.tokenEip712Version };
+  }
+  if (a === config.usdgAddress.toLowerCase()) {
+    return { name: "Global Dollar", version: "1" };
+  }
+  return { name: symbol, version: "1" };
+}
+
+export function explorerAddress(address: string) {
+  const base = config.explorerBase.replace(/\/$/, "");
+  return `${base}/address/${address}`;
+}
 
 export function explorerTx(hash: string) {
   const base = config.explorerBase.replace(/\/$/, "");

@@ -1,10 +1,13 @@
 import {
   config,
+  eip712DomainFor,
   explorerTx,
   toAtomic,
 } from "@/lib/config";
 import {
   ArbitrumFacilitator,
+  checkoutOrderKey,
+  checkoutOrderNonce,
   decodePaymentSignatureHeader,
   encodePaymentRequiredHeader,
   type PaymentPayload,
@@ -27,21 +30,38 @@ export function buildPaymentRequired(
   ).toString();
   const asset = (sku.settleAsset || config.tokenAddress).trim();
   const symbol = (sku.settleSymbol || config.tokenSymbol).trim();
-  const isDefaultToken =
-    asset.toLowerCase() === config.tokenAddress.toLowerCase();
+  const checkout = config.checkoutAddress;
+  const orderKey = checkout ? checkoutOrderKey(orderId) : undefined;
   const accept: PaymentRequirements = {
     scheme: "exact",
     network: config.network,
     amount,
     asset,
-    payTo: store.merchantAddress,
+    payTo: checkout || store.merchantAddress,
     maxTimeoutSeconds: 300,
     extra: {
-      name: isDefaultToken ? config.tokenEip712Name : symbol,
-      version: isDefaultToken ? config.tokenEip712Version : "1",
+      ...eip712DomainFor(asset, symbol),
       orderId,
+      settleSymbol: symbol,
       quoteCurrency: sku.quoteCurrency || symbol,
       quotePrice: sku.quotePrice || sku.price,
+      ...(checkout && orderKey
+        ? {
+            primaryType: "ReceiveWithAuthorization" as const,
+            checkout,
+            merchant: store.merchantAddress,
+            orderKey,
+            nonce: checkoutOrderNonce({
+              chainId: config.chainId,
+              checkout,
+              orderKey,
+              merchant: store.merchantAddress,
+              token: asset,
+              amount,
+            }),
+            feeBps: config.protocolFeeBps,
+          }
+        : {}),
     },
   };
   return {
@@ -119,6 +139,7 @@ export async function verifyAndSettle(args: {
       txHash: settled.transaction,
       explorerUrl: explorerTx(settled.transaction),
       payer: settled.payer,
+      checkout: settled.checkout,
     };
   } catch (error) {
     const reason =

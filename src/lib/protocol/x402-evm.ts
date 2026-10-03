@@ -1,8 +1,11 @@
 import {
   createPublicClient,
   createWalletClient,
+  decodeEventLog,
+  encodeAbiParameters,
   getAddress,
   http,
+  keccak256,
   parseSignature,
   toHex,
   type Hex,
@@ -19,8 +22,19 @@ export type PaymentRequirements = {
   asset: string;
   payTo: string;
   maxTimeoutSeconds: number;
-  extra?: Record<string, unknown> & { name?: string; version?: string };
+  extra?: Record<string, unknown> & {
+    name?: string;
+    version?: string;
+    /** "ReceiveWithAuthorization" when payTo is a BorneoCheckout contract. */
+    primaryType?: AuthorizationType;
+    checkout?: string;
+    merchant?: string;
+    orderKey?: Hex;
+    nonce?: Hex;
+  };
 };
+
+export type AuthorizationType = "TransferWithAuthorization" | "ReceiveWithAuthorization";
 
 export type PaymentRequired = {
   x402Version: 2;
@@ -50,19 +64,132 @@ export type VerifyResult =
   | { isValid: false; invalidReason: string; payer?: string };
 
 export type SettleResult =
-  | { success: true; transaction: Hex; payer: string }
+  | {
+      success: true;
+      transaction: Hex;
+      payer: string;
+      /** Set when settled through BorneoCheckout (from the OrderSettled event). */
+      checkout?: { feeAtomic: string; points: string; netAtomic: string };
+    }
   | { success: false; errorReason: string; transaction?: Hex; payer?: string };
 
-const authorizationTypes = {
-  TransferWithAuthorization: [
-    { name: "from", type: "address" },
-    { name: "to", type: "address" },
-    { name: "value", type: "uint256" },
-    { name: "validAfter", type: "uint256" },
-    { name: "validBefore", type: "uint256" },
-    { name: "nonce", type: "bytes32" },
-  ],
-} as const;
+const authorizationFields = [
+  { name: "from", type: "address" },
+  { name: "to", type: "address" },
+  { name: "value", type: "uint256" },
+  { name: "validAfter", type: "uint256" },
+  { name: "validBefore", type: "uint256" },
+  { name: "nonce", type: "bytes32" },
+] as const;
+
+const ORDER_TYPEHASH = keccak256(
+  toHex(
+    "BorneoOrder(uint256 chainId,address checkout,bytes32 orderId,address merchant,address token,uint256 amount)",
+  ),
+);
+
+/** Mirrors BorneoCheckout.orderNonce: binds the authorization to one order. */
+export function checkoutOrderNonce(args: {
+  chainId: number;
+  checkout: string;
+  orderKey: Hex;
+  merchant: string;
+  token: string;
+  amount: string | bigint;
+}): Hex {
+  return keccak256(
+    encodeAbiParameters(
+      [
+        { type: "bytes32" },
+        { type: "uint256" },
+        { type: "address" },
+        { type: "bytes32" },
+        { type: "address" },
+        { type: "address" },
+        { type: "uint256" },
+      ],
+      [
+        ORDER_TYPEHASH,
+        BigInt(args.chainId),
+        getAddress(args.checkout),
+        args.orderKey,
+        getAddress(args.merchant),
+        getAddress(args.token),
+        BigInt(args.amount),
+      ],
+    ),
+  );
+}
+
+/** bytes32 order key used on-chain for an app order id (UUID). */
+export function checkoutOrderKey(orderId: string): Hex {
+  return keccak256(toHex(orderId));
+}
+
+const checkoutAbi = [
+  {
+    type: "function",
+    name: "settle",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "orderId", type: "bytes32" },
+      { name: "merchant", type: "address" },
+      { name: "token", type: "address" },
+      { name: "payer", type: "address" },
+      { name: "amount", type: "uint256" },
+      {
+        name: "auth",
+        type: "tuple",
+        components: [
+          { name: "validAfter", type: "uint256" },
+          { name: "validBefore", type: "uint256" },
+          { name: "nonce", type: "bytes32" },
+          { name: "v", type: "uint8" },
+          { name: "r", type: "bytes32" },
+          { name: "s", type: "bytes32" },
+        ],
+      },
+    ],
+    outputs: [
+      { name: "fee", type: "uint256" },
+      { name: "points", type: "uint256" },
+    ],
+  },
+  {
+    type: "event",
+    name: "OrderSettled",
+    inputs: [
+      { name: "orderId", type: "bytes32", indexed: true },
+      { name: "merchant", type: "address", indexed: true },
+      { name: "payer", type: "address", indexed: true },
+      { name: "token", type: "address", indexed: false },
+      { name: "amount", type: "uint256", indexed: false },
+      { name: "fee", type: "uint256", indexed: false },
+      { name: "points", type: "uint256", indexed: false },
+    ],
+  },
+  { type: "error", name: "ZeroAmount", inputs: [] },
+  { type: "error", name: "TokenNotAllowed", inputs: [{ name: "token", type: "address" }] },
+  { type: "error", name: "OrderAlreadySettled", inputs: [{ name: "orderId", type: "bytes32" }] },
+  { type: "error", name: "InvalidMerchant", inputs: [{ name: "merchant", type: "address" }] },
+  {
+    type: "error",
+    name: "NonceMismatch",
+    inputs: [
+      { name: "expected", type: "bytes32" },
+      { name: "provided", type: "bytes32" },
+    ],
+  },
+  {
+    type: "error",
+    name: "AmountNotReceived",
+    inputs: [
+      { name: "expected", type: "uint256" },
+      { name: "received", type: "uint256" },
+    ],
+  },
+  { type: "error", name: "EnforcedPause", inputs: [] },
+] as const;
 
 const eip3009Abi = [
   {
@@ -116,29 +243,40 @@ function chainFor(network: string) {
   throw new Error(`Unsupported network: ${network} (Arbitrum One or Sepolia only)`);
 }
 
+function authorizationType(requirements: PaymentRequirements): AuthorizationType {
+  return requirements.extra?.primaryType === "ReceiveWithAuthorization"
+    ? "ReceiveWithAuthorization"
+    : "TransferWithAuthorization";
+}
+
 function typedData(requirements: PaymentRequirements, auth: Eip3009Authorization) {
   const name = requirements.extra?.name;
   const version = requirements.extra?.version;
   if (!name || !version) {
     throw new Error("Payment requirements are missing the EIP-712 domain (extra.name / extra.version)");
   }
+  const domain = {
+    name,
+    version,
+    chainId: chainIdOf(requirements.network),
+    verifyingContract: getAddress(requirements.asset),
+  };
+  const message = {
+    from: getAddress(auth.from),
+    to: getAddress(auth.to),
+    value: BigInt(auth.value),
+    validAfter: BigInt(auth.validAfter),
+    validBefore: BigInt(auth.validBefore),
+    nonce: auth.nonce,
+  };
   return {
-    domain: {
-      name,
-      version,
-      chainId: chainIdOf(requirements.network),
-      verifyingContract: getAddress(requirements.asset),
+    domain,
+    types: {
+      TransferWithAuthorization: authorizationFields,
+      ReceiveWithAuthorization: authorizationFields,
     },
-    types: authorizationTypes,
-    primaryType: "TransferWithAuthorization" as const,
-    message: {
-      from: getAddress(auth.from),
-      to: getAddress(auth.to),
-      value: BigInt(auth.value),
-      validAfter: BigInt(auth.validAfter),
-      validBefore: BigInt(auth.validBefore),
-      nonce: auth.nonce,
-    },
+    primaryType: authorizationType(requirements),
+    message,
   };
 }
 
@@ -181,13 +319,19 @@ export async function createPaymentPayload(
     throw new Error("No `exact` payment requirement in 402 challenge");
   }
   const now = Math.floor(Date.now() / 1000);
+  const viaCheckout = authorizationType(accepted) === "ReceiveWithAuthorization";
+  if (viaCheckout && !accepted.extra?.nonce) {
+    throw new Error("Checkout payment requirement is missing extra.nonce");
+  }
   const authorization: Eip3009Authorization = {
     from: account.address,
     to: getAddress(accepted.payTo),
     value: accepted.amount,
     validAfter: String(now - 5),
     validBefore: String(now + accepted.maxTimeoutSeconds),
-    nonce: toHex(crypto.getRandomValues(new Uint8Array(32))),
+    nonce: viaCheckout
+      ? (accepted.extra!.nonce as Hex)
+      : toHex(crypto.getRandomValues(new Uint8Array(32))),
   };
   const signature = await account.signTypedData(typedData(accepted, authorization));
   return {
@@ -200,14 +344,17 @@ export async function createPaymentPayload(
 
 /**
  * Facilitator for x402 `exact` payments on Arbitrum: verifies EIP-3009
- * authorizations and relays `transferWithAuthorization` (relayer pays gas).
+ * authorizations and relays them (relayer pays gas). Direct mode calls
+ * `transferWithAuthorization`; checkout mode calls `BorneoCheckout.settle`.
  */
 export class ArbitrumFacilitator {
   private readonly publicClient;
   private readonly walletClient;
+  private readonly chainId: number;
 
   constructor(opts: { relayerKey: Hex; network: string; rpcUrl: string }) {
     const chain = chainFor(opts.network);
+    this.chainId = chain.id;
     const transport = http(opts.rpcUrl);
     this.publicClient = createPublicClient({ chain, transport });
     this.walletClient = createWalletClient({
@@ -240,6 +387,24 @@ export class ArbitrumFacilitator {
     }
     if (BigInt(auth.value) !== BigInt(requirements.amount)) {
       return fail("amount_mismatch");
+    }
+    if (authorizationType(requirements) === "ReceiveWithAuthorization") {
+      const { checkout, merchant, orderKey } = requirements.extra ?? {};
+      if (!checkout || !merchant || !orderKey) return fail("invalid_checkout_requirements");
+      if (getAddress(checkout) !== getAddress(requirements.payTo)) {
+        return fail("recipient_mismatch");
+      }
+      const expected = checkoutOrderNonce({
+        chainId: this.chainId,
+        checkout,
+        orderKey,
+        merchant,
+        token: requirements.asset,
+        amount: requirements.amount,
+      });
+      if (auth.nonce.toLowerCase() !== expected.toLowerCase()) {
+        return fail("order_nonce_mismatch");
+      }
     }
     const now = BigInt(Math.floor(Date.now() / 1000));
     if (BigInt(auth.validBefore) < now + 6n) return fail("authorization_expired");
@@ -291,6 +456,9 @@ export class ArbitrumFacilitator {
       };
     }
     const auth = payload.payload.authorization;
+    if (authorizationType(requirements) === "ReceiveWithAuthorization") {
+      return this.settleViaCheckout(payload, requirements);
+    }
     try {
       const { r, s, v, yParity } = parseSignature(payload.payload.signature);
       const hash = await this.walletClient.writeContract({
@@ -324,6 +492,79 @@ export class ArbitrumFacilitator {
         success: false,
         errorReason:
           error instanceof Error ? error.message.split("\n")[0] : "transaction_failed",
+        payer: auth.from,
+      };
+    }
+  }
+
+  private async settleViaCheckout(
+    payload: PaymentPayload,
+    requirements: PaymentRequirements,
+  ): Promise<SettleResult> {
+    const auth = payload.payload.authorization;
+    const { merchant, orderKey } = requirements.extra!;
+    const checkout = getAddress(requirements.payTo);
+    try {
+      const { r, s, v, yParity } = parseSignature(payload.payload.signature);
+      const args = [
+        orderKey!,
+        getAddress(merchant!),
+        getAddress(requirements.asset),
+        getAddress(auth.from),
+        BigInt(auth.value),
+        {
+          validAfter: BigInt(auth.validAfter),
+          validBefore: BigInt(auth.validBefore),
+          nonce: auth.nonce,
+          v: Number(v ?? BigInt(yParity + 27)),
+          r,
+          s,
+        },
+      ] as const;
+      const { request } = await this.publicClient.simulateContract({
+        account: this.walletClient.account,
+        address: checkout,
+        abi: checkoutAbi,
+        functionName: "settle",
+        args,
+      });
+      const hash = await this.walletClient.writeContract(request);
+      const receipt = await this.publicClient.waitForTransactionReceipt({ hash });
+      if (receipt.status !== "success") {
+        return {
+          success: false,
+          errorReason: "transaction_reverted",
+          transaction: hash,
+          payer: auth.from,
+        };
+      }
+      for (const log of receipt.logs) {
+        if (getAddress(log.address) !== checkout) continue;
+        try {
+          const event = decodeEventLog({ abi: checkoutAbi, data: log.data, topics: log.topics });
+          if (event.eventName !== "OrderSettled") continue;
+          const { amount, fee, points } = event.args;
+          return {
+            success: true,
+            transaction: hash,
+            payer: auth.from,
+            checkout: {
+              feeAtomic: fee.toString(),
+              points: points.toString(),
+              netAtomic: (amount - fee).toString(),
+            },
+          };
+        } catch {
+          continue;
+        }
+      }
+      return { success: true, transaction: hash, payer: auth.from };
+    } catch (error) {
+      const err = error as { shortMessage?: string; message?: string };
+      return {
+        success: false,
+        errorReason:
+          err.shortMessage || err.message?.split("\n")[0] || "checkout_settle_failed",
         payer: auth.from,
       };
     }

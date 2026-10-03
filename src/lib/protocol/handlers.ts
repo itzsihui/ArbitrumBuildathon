@@ -196,7 +196,9 @@ export async function handleBuy(slug: string, request: Request) {
   }
 
   const txHash = verified.txHash;
-  const feeAtomic = computeFeeAtomic(amountAtomic, config.protocolFeeBps);
+  const onchain = verified.checkout;
+  const feeAtomic =
+    onchain?.feeAtomic ?? computeFeeAtomic(amountAtomic, config.protocolFeeBps);
   const ownershipPoints = pointsFromFeeAtomic(feeAtomic);
   const paid: Order = {
     id: orderId,
@@ -214,7 +216,7 @@ export async function handleBuy(slug: string, request: Request) {
     paidAt: new Date().toISOString(),
     grossAtomic: amountAtomic,
     feeAtomic,
-    netToMerchantAtomic: amountAtomic,
+    netToMerchantAtomic: onchain?.netAtomic ?? amountAtomic,
     protocolFeeBps: config.protocolFeeBps,
     referrerId: body.referrerId?.trim() || undefined,
     swapTxHash: body.swapTxHash?.trim() || undefined,
