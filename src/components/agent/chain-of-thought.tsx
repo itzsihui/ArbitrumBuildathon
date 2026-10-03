@@ -109,6 +109,7 @@ export function ChainOfThought({
   live = false,
   liveSummary = "Searching catalog…",
   errorSummary = "Search needs attention",
+  defaultOpen = false,
 }: {
   steps: ChainStep[];
   className?: string;
@@ -122,18 +123,22 @@ export function ChainOfThought({
   liveSummary?: string;
   /** Chat-variant label when a step failed. */
   errorSummary?: string;
+  /** Chat variant: start expanded and don't auto-collapse on completion. */
+  defaultOpen?: boolean;
 }) {
   const completed = steps.filter((s) => s.status === "complete").length;
   const hasError = steps.some((s) => s.status === "error");
   const hasActive = steps.some((s) => s.status === "active");
   const embedded = variant === "chat";
-  const [open, setOpen] = useState(embedded ? live || hasActive : true);
+  const [open, setOpen] = useState(
+    embedded ? defaultOpen || live || hasActive : true,
+  );
 
   useEffect(() => {
     if (!embedded) return;
     if (live || hasActive) setOpen(true);
-    else if (completed === steps.length || hasError) setOpen(false);
-  }, [embedded, live, hasActive, completed, steps.length, hasError]);
+    else if (!defaultOpen && (completed === steps.length || hasError)) setOpen(false);
+  }, [embedded, live, hasActive, completed, steps.length, hasError, defaultOpen]);
 
   const summary =
     live || hasActive

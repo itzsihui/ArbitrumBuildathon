@@ -7,9 +7,19 @@ import {
   type PaymentRequirements,
 } from "@/lib/protocol/x402-evm";
 import { resolveBuyerTarget } from "@/lib/agents/discover";
-import { config, explorerTx, toAtomic, toPaymentAmount } from "@/lib/config";
+import {
+  config,
+  explorerTx,
+  toAtomic,
+  toPaymentAmount,
+} from "@/lib/config";
 import { ensureSettleLiquidity } from "@/lib/liquidity/route";
 import { emit } from "@/lib/protocol/events";
+
+const exactAmount = (atomic: string) =>
+  String(Number(atomic) / 10 ** config.tokenDecimals);
+
+const shortAddr = (a: string) => (a.length > 12 ? `${a.slice(0, 6)}…${a.slice(-4)}` : a);
 
 const sameAddress = (a?: string, b?: string) =>
   !!a && !!b && a.trim().toLowerCase() === b.trim().toLowerCase();
@@ -281,6 +291,16 @@ export async function payX402Tool(args: {
     return { steps };
   }
 
+  const challengeSymbol = String(accept.extra?.settleSymbol || config.tokenSymbol);
+  const humanAmount = `${exactAmount(accept.amount)} ${challengeSymbol}`;
+  const viaCheckoutChallenge = accept.extra?.primaryType === "ReceiveWithAuthorization";
+  steps.push({
+    type: "info",
+    text: viaCheckoutChallenge
+      ? `Store challenge: pay ${humanAmount} to BorneoCheckout ${shortAddr(accept.payTo)} for merchant ${shortAddr(String(accept.extra?.merchant))} · order nonce ${shortAddr(String(accept.extra?.nonce))}`
+      : `Store challenge: pay ${humanAmount} to merchant ${shortAddr(accept.payTo)}`,
+  });
+
   const payToCheck = checkPayTo(accept, expectedPayTo);
   if (!payToCheck.ok) {
     steps.push({ type: "error", text: `Capability check failed: ${payToCheck.reason}` });
@@ -298,8 +318,8 @@ export async function payX402Tool(args: {
   steps.push({
     type: "info",
     text: payToCheck.viaCheckout
-      ? "Capability checks passed: BorneoCheckout order nonce binds merchant + amount to the locked quote"
-      : "Capability checks passed: payTo + amount match locked quote",
+      ? `Capability check passed: agent recomputed the order nonce. It binds merchant ${shortAddr(expectedPayTo)} and ${humanAmount} to the locked quote`
+      : "Capability check passed: payTo + amount match locked quote",
   });
 
   const buyerKey = config.buyerPrivateKey;
@@ -324,9 +344,9 @@ export async function payX402Tool(args: {
 
   steps.push({
     type: "chain",
-    text: `Signing ${String(accept.extra?.settleSymbol || config.tokenSymbol)} ${
-      payToCheck.viaCheckout ? "ReceiveWithAuthorization" : "Payment"
-    } ${accept.amount} atomic → ${accept.payTo} on ${config.network} (${account.address})`,
+    text: `Signing gasless EIP-3009 ${
+      payToCheck.viaCheckout ? "ReceiveWithAuthorization" : "TransferWithAuthorization"
+    }: ${humanAmount} from ${shortAddr(account.address)} on ${config.chainLabel} (buyer needs no ETH)`,
   });
 
   let paymentHeader: string;
@@ -348,7 +368,12 @@ export async function payX402Tool(args: {
     return { steps, receipt: challenge as BuyerReceipt };
   }
 
-  steps.push({ type: "chain", text: "Signed PAYMENT-SIGNATURE ready" });
+  steps.push({
+    type: "chain",
+    text: payToCheck.viaCheckout
+      ? "Signed. Relayer submits BorneoCheckout.settle() on Arbitrum"
+      : "Signed. Relayer submits transferWithAuthorization on Arbitrum",
+  });
 
   const second = await fetch(`${base}/buy`, {
     method: "POST",
@@ -391,6 +416,12 @@ export async function payX402Tool(args: {
     type: second.ok ? "success" : "error",
     text: `HTTP ${second.status} ${second.ok ? "receipt unlocked" : JSON.stringify(receipt)}`,
   });
+  if (second.ok && payToCheck.viaCheckout && receipt.feeAtomic && receipt.netToMerchantAtomic) {
+    steps.push({
+      type: "success",
+      text: `Settled on ${config.chainLabel}: merchant ${exactAmount(String(receipt.netToMerchantAtomic))} ${challengeSymbol} + treasury fee ${exactAmount(String(receipt.feeAtomic))} ${challengeSymbol}, in one transaction`,
+    });
+  }
   if (second.ok && receipt.explorerUrl) {
     steps.push({ type: "success", text: receipt.explorerUrl });
   } else if (second.ok && receipt.txHash) {

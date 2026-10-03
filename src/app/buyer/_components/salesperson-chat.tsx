@@ -246,6 +246,7 @@ export function SalespersonChat({
                     variant="chat"
                     live={false}
                     title="Thought process"
+                    defaultOpen={msg.stepsOpen}
                   />
                 ) : null}
 

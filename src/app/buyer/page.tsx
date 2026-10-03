@@ -22,6 +22,7 @@ import { CartPayModal } from "./_components/cart-pay-modal";
 import { ChatHistorySidebar } from "./_components/chat-history-sidebar";
 import { SalespersonChat } from "./_components/salesperson-chat";
 import {
+  agentStepsToProtocolLines,
   catalogResultMessage,
   createInitialState,
   INITIAL_STEPS,
@@ -962,7 +963,7 @@ export default function BuyerPage() {
             title:
               rail === "visa"
                 ? `Settling Visa · ${lines.length} locked quote(s)`
-                : `Settling USDC x402 · ${lines.length} locked quote(s)`,
+                : `Settling x402 on Arbitrum · ${lines.length} locked quote(s)`,
             status: "active",
             capability: "privileged",
             description: "Authorized — each SKU settles on its locked quote…",
@@ -971,6 +972,7 @@ export default function BuyerPage() {
       }));
 
       const links: Array<{ label: string; href: string }> = [];
+      const paymentSteps: ChainStep[] = [];
 
       try {
         for (const line of lines) {
@@ -1020,21 +1022,63 @@ export default function BuyerPage() {
                   routeSummary?: string;
                 };
               };
-              if (
+              const failed =
                 (data.steps ?? []).some((s) => s.type === "error") ||
-                !(data.steps ?? []).some((s) => s.type === "success")
-              ) {
-                const errStep = (data.steps ?? []).find((s) => s.type === "error");
-                throw new Error(
-                  errStep?.text || data.error || "x402 settlement failed",
-                );
-              }
+                !(data.steps ?? []).some((s) => s.type === "success");
               const explorer =
                 data.receipt?.explorerUrl ||
                 (data.steps ?? []).find(
                   (s) =>
                     s.type === "success" && /^https?:\/\//i.test(s.text.trim()),
                 )?.text.trim();
+
+              const x402Id = `x402-${line.id}-${q}`;
+              const protocolLines = agentStepsToProtocolLines(
+                (data.steps ?? []).length
+                  ? data.steps!
+                  : [{ type: "error", text: data.error || "x402 settlement failed" }],
+              );
+              const x402Step: ChainStep = {
+                id: x402Id,
+                title: `x402 handshake · ${line.title}`,
+                status: "active",
+                capability: "privileged",
+                description: "Agent ↔ store ↔ BorneoCheckout on Arbitrum",
+                protocolLines: [],
+              };
+              setState((prev) => ({
+                ...prev,
+                steps: [...prev.steps.filter((s) => s.id !== x402Id), x402Step],
+              }));
+              for (let i = 1; i <= protocolLines.length; i++) {
+                await sleep(300);
+                setState((prev) => ({
+                  ...prev,
+                  steps: updateStep(prev.steps, x402Id, {
+                    protocolLines: protocolLines.slice(0, i),
+                  }),
+                }));
+              }
+              const finished: ChainStep = {
+                ...x402Step,
+                status: failed ? "error" : "complete",
+                protocolLines,
+                links: explorer
+                  ? [{ label: "View on Arbiscan", href: explorer }]
+                  : undefined,
+              };
+              setState((prev) => ({
+                ...prev,
+                steps: updateStep(prev.steps, x402Id, finished),
+              }));
+              paymentSteps.push(finished);
+
+              if (failed) {
+                const errStep = (data.steps ?? []).find((s) => s.type === "error");
+                throw new Error(
+                  errStep?.text || data.error || "x402 settlement failed",
+                );
+              }
               recordSpend({
                 amount: unit,
                 rail: "x402",
@@ -1146,6 +1190,8 @@ export default function BuyerPage() {
             {
               role: "assistant",
               content: "Purchase complete.",
+              steps: paymentSteps.length ? paymentSteps : undefined,
+              stepsOpen: paymentSteps.length > 0,
               links: links.length
                 ? links.slice(0, 4).map((l, i) => ({
                     label:
@@ -1174,6 +1220,17 @@ export default function BuyerPage() {
           phase: "chat",
           busy: false,
           error: messageText,
+          messages: paymentSteps.length
+            ? [
+                ...prev.messages,
+                {
+                  role: "assistant",
+                  content: "Payment did not complete. Here is what the agent saw.",
+                  steps: paymentSteps,
+                  stepsOpen: true,
+                },
+              ]
+            : prev.messages,
           steps: updateStep(prev.steps, "settle", {
             status: "error",
             description: messageText,

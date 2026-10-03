@@ -148,7 +148,9 @@ export async function handleBuy(slug: string, request: Request) {
       store: slug,
       orderId,
       rail: "x402",
-      message: `HTTP 402 ${fromAtomic(amountAtomic)} ${sku.settleSymbol || config.tokenSymbol} to ${store.merchantAddress}`,
+      message: config.checkoutAddress
+        ? `HTTP 402 ${fromAtomic(amountAtomic)} ${sku.settleSymbol || config.tokenSymbol} → BorneoCheckout ${config.checkoutAddress} (merchant ${store.merchantAddress})`
+        : `HTTP 402 ${fromAtomic(amountAtomic)} ${sku.settleSymbol || config.tokenSymbol} to ${store.merchantAddress}`,
     });
     return new Response(JSON.stringify(requirements, null, 2), {
       status: 402,
@@ -236,7 +238,9 @@ export async function handleBuy(slug: string, request: Request) {
     store: slug,
     orderId,
     rail: "x402",
-    message: `HTTP 200 receipt ${txHash}`,
+    message: onchain
+      ? `HTTP 200 BorneoCheckout.settle ${txHash} · merchant ${fromAtomic(onchain.netAtomic)} + fee ${onchain.feeAtomic} atomic`
+      : `HTTP 200 receipt ${txHash}`,
   });
   return json(receipt(paid, store));
 }

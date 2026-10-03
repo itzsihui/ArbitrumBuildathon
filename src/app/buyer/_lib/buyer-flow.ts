@@ -70,7 +70,24 @@ export type ChatMessage = {
   links?: Array<{ label: string; href: string }>;
   /** Expandable thought process for this turn (stays after search completes). */
   steps?: ChainStep[];
+  /** Keep `steps` expanded after completion (x402 payment handshake). */
+  stepsOpen?: boolean;
 };
+
+/** Buyer-agent step lines → role-labelled protocol lines for the chat log. */
+export function agentStepsToProtocolLines(
+  steps: Array<{ type: string; text: string }>,
+): Array<{ role: string; text: string }> {
+  return steps.map((s) => {
+    const text = s.text.trim();
+    if (s.type === "http") return { role: "store", text };
+    if (s.type === "error") return { role: "error", text };
+    if (s.type === "success") return { role: "arbitrum", text };
+    if (/^Store challenge/i.test(text)) return { role: "store", text };
+    if (/^Signed\./i.test(text)) return { role: "relayer", text };
+    return { role: "agent", text };
+  });
+}
 
 export type FashionProfile = {
   category?: string;
