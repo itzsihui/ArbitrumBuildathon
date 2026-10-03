@@ -1,0 +1,11 @@
+import { handleLlmsTxt } from "@/lib/protocol/handlers";
+
+export const runtime = "nodejs";
+
+export async function GET(
+  request: Request,
+  context: { params: Promise<{ slug: string }> },
+) {
+  const { slug } = await context.params;
+  return handleLlmsTxt(slug, request);
+}
