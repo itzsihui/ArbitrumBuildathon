@@ -148,7 +148,7 @@ export async function handleBuy(slug: string, request: Request) {
       store: slug,
       orderId,
       rail: "x402",
-      message: `HTTP 402 ${fromAtomic(amountAtomic)} ${config.tokenSymbol} to ${store.merchantAddress}`,
+      message: `HTTP 402 ${fromAtomic(amountAtomic)} ${sku.settleSymbol || config.tokenSymbol} to ${store.merchantAddress}`,
     });
     return new Response(JSON.stringify(requirements, null, 2), {
       status: 402,
@@ -350,7 +350,9 @@ function receipt(order: Order, store?: StoreRecord | null) {
     store: order.slug,
     skuId: order.skuId,
     quantity: order.quantity,
-    amount: `${fromAtomic(order.amountAtomic)} ${config.tokenSymbol}`,
+    amount: `${fromAtomic(order.amountAtomic)} ${
+      store?.skus.find((s) => s.id === order.skuId)?.settleSymbol || config.tokenSymbol
+    }`,
     rail: order.rail,
     status: order.status,
     txHash: order.txHash,

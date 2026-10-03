@@ -23,7 +23,7 @@
 | Product-market fit | Agents need a way to pay merchants safely over plain HTTP; any agent can buy from any Borneo store with a single 402 round trip and no ETH for gas. |
 | Innovation | x402 + a checkout contract that binds each authorization to one order, with on-chain rewards. |
 | Real problem solving | Fragmented assets → Uniswap V3 route quote → stablecoin settle in one flow; merchants get paid on-chain with an auditable receipt. |
-| Paxos USDG | USDG is allowlisted in the checkout, the default second settle asset, and covered by a fork test against the real Paxos contract. |
+| Paxos USDG | USDG is allowlisted in the checkout and is the default second settle asset (`/s/harbor-caps`, Harbor Cap alt rail). Real USDG order on the live site: [`0x0ae5…0447`](https://sepolia.arbiscan.io/tx/0x0ae5f616ed692d6d3955c950a4ab8d73bb87a37162e876b8f654c52f897c0447). Also covered by a fork test against the real Paxos contract. |
 
 ## Demo video shot list (~3 min)
 
