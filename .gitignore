@@ -1,0 +1,90 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+/dist
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# env files (can opt-in for committing if needed)
+.env*
+!.env.example
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# local Cursor hooks (machine-specific)
+.cursor/hooks.json
+
+# IDE feedback hooks (not part of the product)
+/hook/
+
+# redundant pitch assets (markdown sources are enough)
+docs/*.pdf
+architecture.drawio
+
+# speaker / internal pitch (not required to run the app)
+PITCH.md
+PITCH-3MIN-SPEAKER-NOTES.md
+Agentic Storefront Protocol Pitch Document.md
+
+# Vendored Onchain OS skill packs — reinstall with:
+#   npx skills add okx/onchainos-skills --yes
+# Keep only the small project skill: okx-devday-resources
+.agents/skills/okx-ai/
+.agents/skills/okx-agentic-wallet/
+.agents/skills/okx-dex-market/
+.agents/skills/okx-defi/
+.agents/skills/okx-dapp-discovery/
+.agents/skills/okx-guide/
+.agents/skills/okx-agent-payments-protocol/
+.claude/skills/okx-ai/
+.claude/skills/okx-agentic-wallet/
+.claude/skills/okx-dex-market/
+.claude/skills/okx-defi/
+.claude/skills/okx-dapp-discovery/
+.claude/skills/okx-guide/
+.claude/skills/okx-agent-payments-protocol/
+.codex/skills/okx-ai/
+.codex/skills/okx-agentic-wallet/
+.codex/skills/okx-dex-market/
+.codex/skills/okx-defi/
+.codex/skills/okx-dapp-discovery/
+.codex/skills/okx-guide/
+.codex/skills/okx-agent-payments-protocol/
+.cursor/skills/okx-ai/
+.cursor/skills/okx-agentic-wallet/
+.cursor/skills/okx-dex-market/
+.cursor/skills/okx-defi/
+.cursor/skills/okx-dapp-discovery/
+.cursor/skills/okx-guide/
+.cursor/skills/okx-agent-payments-protocol/
