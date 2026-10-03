@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "onchainos": {
+      "command": "onchainos",
+      "args": ["mcp"],
+      "env": {
+        "OKX_API_KEY": "${OKX_API_KEY}",
+        "OKX_SECRET_KEY": "${OKX_SECRET_KEY}",
+        "OKX_PASSPHRASE": "${OKX_PASSPHRASE}"
+      }
+    }
+  }
+}
