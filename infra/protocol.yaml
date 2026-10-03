@@ -1,0 +1,301 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  Aisle protocol — Well-Architected slice.
+  HTTP API + Lambda (x402 402→200) + DynamoDB + SSM + CloudWatch metrics/alarm.
+  No Bedrock shopping CDK. No OpenSearch. No Fargate.
+
+Parameters:
+  MerchantAddress:
+    Type: String
+    Description: Merchant payTo address for x402 (Base Sepolia)
+  TokenAddress:
+    Type: String
+    Default: "0x036CbD53842c5426634e7929541eC2318f3dCF7e"
+  TokenSymbol:
+    Type: String
+    Default: USDC
+  TokenDecimals:
+    Type: String
+    Default: "6"
+  AvalancheRpcUrl:
+    Type: String
+    Default: "https://sepolia.base.org"
+    Description: RPC URL (Base Sepolia; param name kept for stack compatibility)
+  AvalancheNetwork:
+    Type: String
+    Default: base-sepolia
+  ChainId:
+    Type: String
+    Default: "84532"
+  ExplorerBase:
+    Type: String
+    Default: "https://sepolia.basescan.org"
+  ArtifactBucket:
+    Type: String
+    Description: S3 bucket holding the Lambda zip
+  ArtifactKey:
+    Type: String
+    Default: aisle-protocol.zip
+
+Resources:
+  ProtocolTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub aisle-protocol-${AWS::StackName}
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: pk
+          AttributeType: S
+        - AttributeName: sk
+          AttributeType: S
+        - AttributeName: gsi1pk
+          AttributeType: S
+        - AttributeName: gsi1sk
+          AttributeType: S
+      KeySchema:
+        - AttributeName: pk
+          KeyType: HASH
+        - AttributeName: sk
+          KeyType: RANGE
+      GlobalSecondaryIndexes:
+        - IndexName: gsi1
+          KeySchema:
+            - AttributeName: gsi1pk
+              KeyType: HASH
+            - AttributeName: gsi1sk
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+      Tags:
+        - Key: Project
+          Value: Aisle
+        - Key: Purpose
+          Value: WellArchitectedProtocol
+
+  MerchantAddressParam:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /aisle/${AWS::StackName}/merchant-address
+      Type: String
+      Value: !Ref MerchantAddress
+      Description: Merchant Base Sepolia payTo (no secrets in git)
+
+  RpcUrlParam:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /aisle/${AWS::StackName}/base-rpc
+      Type: String
+      Value: !Ref AvalancheRpcUrl
+
+  ProtocolLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/aisle-protocol-${AWS::StackName}
+      RetentionInDays: 7
+
+  ProtocolRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub aisle-protocol-${AWS::StackName}
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: aisle-protocol-least-privilege
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: Logs
+                Effect: Allow
+                Action:
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !GetAtt ProtocolLogGroup.Arn
+              - Sid: Dynamo
+                Effect: Allow
+                Action:
+                  - dynamodb:GetItem
+                  - dynamodb:PutItem
+                  - dynamodb:UpdateItem
+                  - dynamodb:Query
+                  - dynamodb:Scan
+                Resource:
+                  - !GetAtt ProtocolTable.Arn
+                  - !Sub ${ProtocolTable.Arn}/index/*
+              - Sid: ReadSsm
+                Effect: Allow
+                Action:
+                  - ssm:GetParameter
+                  - ssm:GetParameters
+                Resource:
+                  - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/aisle/${AWS::StackName}/*
+
+  ProtocolFunction:
+    Type: AWS::Lambda::Function
+    DependsOn: ProtocolLogGroup
+    Properties:
+      FunctionName: !Sub aisle-protocol-${AWS::StackName}
+      Runtime: nodejs20.x
+      Handler: index.handler
+      MemorySize: 512
+      Timeout: 29
+      Role: !GetAtt ProtocolRole.Arn
+      Code:
+        S3Bucket: !Ref ArtifactBucket
+        S3Key: !Ref ArtifactKey
+      Environment:
+        Variables:
+          AISLE_TABLE: !Ref ProtocolTable
+          AWS_NODEJS_CONNECTION_REUSE_ENABLED: "1"
+          MERCHANT_ADDRESS: !Ref MerchantAddress
+          TOKEN_ADDRESS: !Ref TokenAddress
+          TOKEN_SYMBOL: !Ref TokenSymbol
+          TOKEN_DECIMALS: !Ref TokenDecimals
+          AVALANCHE_RPC_URL: !Ref AvalancheRpcUrl
+          AVALANCHE_NETWORK: !Ref AvalancheNetwork
+          BASE_RPC_URL: !Ref AvalancheRpcUrl
+          BASE_NETWORK: !Ref AvalancheNetwork
+          CHAIN_ID: !Ref ChainId
+          EXPLORER_BASE: !Ref ExplorerBase
+          PROTOCOL_ORIGIN: !Sub https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com
+      Tags:
+        - Key: Project
+          Value: Aisle
+
+  # Metric filters (Operational Excellence) — match plain log lines from emit()
+  MetricFilter402:
+    Type: AWS::Logs::MetricFilter
+    DependsOn: ProtocolFunction
+    Properties:
+      LogGroupName: !Sub /aws/lambda/aisle-protocol-${AWS::StackName}
+      FilterPattern: '"HTTP 402"'
+      MetricTransformations:
+        - MetricNamespace: Aisle/Protocol
+          MetricName: Http402FromLogs
+          MetricValue: "1"
+          DefaultValue: 0
+          Unit: Count
+
+  MetricFilter200:
+    Type: AWS::Logs::MetricFilter
+    DependsOn: ProtocolFunction
+    Properties:
+      LogGroupName: !Sub /aws/lambda/aisle-protocol-${AWS::StackName}
+      FilterPattern: '"HTTP 200"'
+      MetricTransformations:
+        - MetricNamespace: Aisle/Protocol
+          MetricName: Http200FromLogs
+          MetricValue: "1"
+          DefaultValue: 0
+          Unit: Count
+
+  PaidAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub aisle-402-to-200-${AWS::StackName}
+      AlarmDescription: Fires when paid (HTTP 200) receipts land — demo health signal
+      Namespace: Aisle/Protocol
+      MetricName: Http200FromLogs
+      Statistic: Sum
+      Period: 60
+      EvaluationPeriods: 1
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+
+  ProtocolDashboard:
+    Type: AWS::CloudWatch::Dashboard
+    Properties:
+      DashboardName: !Sub aisle-protocol-${AWS::StackName}
+      DashboardBody: !Sub |
+        {
+          "widgets": [
+            {
+              "type": "metric",
+              "x": 0,
+              "y": 0,
+              "width": 12,
+              "height": 6,
+              "properties": {
+                "title": "Aisle x402 402 → 200",
+                "region": "${AWS::Region}",
+                "metrics": [
+                  [ "Aisle/Protocol", "Http402", { "label": "402 Payment Required" } ],
+                  [ ".", "Http200", { "label": "200 Paid" } ],
+                  [ ".", "Http402FromLogs", { "label": "402 (log filter)" } ],
+                  [ ".", "Http200FromLogs", { "label": "200 (log filter)" } ]
+                ],
+                "view": "timeSeries",
+                "stat": "Sum",
+                "period": 60
+              }
+            }
+          ]
+        }
+
+  HttpApi:
+    Type: AWS::ApiGatewayV2::Api
+    Properties:
+      Name: !Sub aisle-protocol-${AWS::StackName}
+      ProtocolType: HTTP
+      CorsConfiguration:
+        AllowOrigins:
+          - "*"
+        AllowMethods:
+          - GET
+          - POST
+          - OPTIONS
+        AllowHeaders:
+          - content-type
+          - payment-signature
+          - authorization
+
+  HttpStage:
+    Type: AWS::ApiGatewayV2::Stage
+    Properties:
+      ApiId: !Ref HttpApi
+      StageName: "$default"
+      AutoDeploy: true
+      DefaultRouteSettings:
+        ThrottlingBurstLimit: 50
+        ThrottlingRateLimit: 20
+
+  LambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref ProtocolFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${HttpApi}/*
+
+  LambdaIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref HttpApi
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ProtocolFunction.Arn}/invocations
+      PayloadFormatVersion: "2.0"
+
+  ProxyRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: "$default"
+      Target: !Sub integrations/${LambdaIntegration}
+
+Outputs:
+  ProtocolBaseUrl:
+    Description: Set PROTOCOL_BASE_URL / NEXT_PUBLIC_PROTOCOL_BASE_URL to this
+    Value: !Sub https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com
+  TableName:
+    Value: !Ref ProtocolTable
+  DashboardName:
+    Value: !Ref ProtocolDashboard
+  FunctionName:
+    Value: !Ref ProtocolFunction
+  MerchantSsmPath:
+    Value: !Sub /aisle/${AWS::StackName}/merchant-address
