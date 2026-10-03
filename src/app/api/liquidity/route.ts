@@ -1,4 +1,4 @@
-import { ensureUsdt0Liquidity } from "@/lib/liquidity/route";
+import { ensureSettleLiquidity } from "@/lib/liquidity/route";
 import {
   cartSettlementTotal,
   groupBySettleAsset,
@@ -21,7 +21,7 @@ type OutfitLineBody = {
 };
 
 /**
- * Preview or execute X Layer liquidity routing (native → settle token) before x402.
+ * Preview or execute Arbitrum liquidity routing (native → settle token) before x402.
  * GET/POST ?price=0.06&execute=0|1&toToken=&toSymbol=
  * POST with `lines` returns an outfit settle plan (hackathon mixed quotes + full multi-asset).
  */
@@ -33,7 +33,7 @@ export async function GET(request: Request) {
   const toTokenAddress = url.searchParams.get("toToken") || undefined;
   const toSymbol = url.searchParams.get("toSymbol") || undefined;
   try {
-    const result = await ensureUsdt0Liquidity({
+    const result = await ensureSettleLiquidity({
       price,
       quantity,
       execute,
@@ -81,7 +81,7 @@ export async function POST(request: Request) {
       const execute = Boolean(body.execute);
       const routes = [];
       for (const g of groups) {
-        const route = await ensureUsdt0Liquidity({
+        const route = await ensureSettleLiquidity({
           price: String(Math.max(g.total, 0.01)),
           quantity: 1,
           execute,
@@ -128,7 +128,7 @@ export async function POST(request: Request) {
       });
     }
 
-    const result = await ensureUsdt0Liquidity({
+    const result = await ensureSettleLiquidity({
       price: body.price || "0.01",
       quantity: body.quantity,
       execute: Boolean(body.execute),

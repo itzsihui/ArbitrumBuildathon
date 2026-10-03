@@ -143,7 +143,7 @@ function needVariantsResult(
     reply:
       reply ??
       (fashionCompletenessAsk(enriched.lines) ||
-        "Fill subcategory, size, color, and other fashion details in the inventory form, then set USDT0 prices."),
+        "Fill subcategory, size, color, and other fashion details in the inventory form, then set USDC prices."),
     draft: enriched,
   };
 }
@@ -602,7 +602,7 @@ export async function saveDraftToLiveStore(args: {
   if (completeLines.length === 0) {
     return needPriceResult(
       withQty,
-      "No complete SKUs to save yet — fill size/color, qty, and USDT0 price on at least one row.",
+      "No complete SKUs to save yet — fill size/color, qty, and USDC price on at least one row.",
     );
   }
 

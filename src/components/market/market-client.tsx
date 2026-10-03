@@ -259,7 +259,7 @@ export function MarketClient() {
                         <p className="font-[family-name:var(--font-syne)] text-lg font-semibold text-[#1a1f16]">
                           {product.price}
                           <span className="ml-1 text-xs font-medium text-[#1a1f16]/45">
-                            USDT0
+                            USDC
                           </span>
                         </p>
                         <p className="text-[11px] text-[#1a1f16]/40">

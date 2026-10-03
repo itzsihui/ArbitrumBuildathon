@@ -1,13 +1,60 @@
-export type ChainNetwork = "eip155:1952" | "eip155:196";
+export type ChainNetwork = "eip155:421614" | "eip155:42161";
 
-/** X Layer Testnet USDT0 (EIP-3009) — from @okxweb3/x402-evm defaults. */
-export const USDT0_TESTNET = "0x9e29b3aada05bf2d2c827af80bd28dc0b9b4fb0c";
-/** X Layer Mainnet USDT0. */
-export const USDT0_MAINNET = "0x779ded0c9e1022225f8e0630b35a9b54be713736";
+/** Circle USDC (EIP-3009) on Arbitrum Sepolia. */
+export const USDC_ARBITRUM_SEPOLIA = "0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d";
+/** Circle native USDC on Arbitrum One. */
+export const USDC_ARBITRUM_ONE = "0xaf88d065e77c8cC2239327C5EDb3A432268e5831";
+
+type ChainPreset = {
+  label: string;
+  rpcUrl: string;
+  explorerBase: string;
+  token: string;
+  tokenSymbol: string;
+  /** EIP-712 domain of the settle token — must match the contract's name()/version(). */
+  tokenEip712Name: string;
+  tokenEip712Version: string;
+  nativeSymbol: string;
+};
+
+export const CHAIN_PRESETS: Record<ChainNetwork, ChainPreset> = {
+  "eip155:421614": {
+    label: "Arbitrum Sepolia",
+    rpcUrl: "https://sepolia-rollup.arbitrum.io/rpc",
+    explorerBase: "https://sepolia.arbiscan.io",
+    token: USDC_ARBITRUM_SEPOLIA,
+    tokenSymbol: "USDC",
+    tokenEip712Name: "USD Coin",
+    tokenEip712Version: "2",
+    nativeSymbol: "ETH",
+  },
+  "eip155:42161": {
+    label: "Arbitrum One",
+    rpcUrl: "https://arb1.arbitrum.io/rpc",
+    explorerBase: "https://arbiscan.io",
+    token: USDC_ARBITRUM_ONE,
+    tokenSymbol: "USDC",
+    tokenEip712Name: "USD Coin",
+    tokenEip712Version: "2",
+    nativeSymbol: "ETH",
+  },
+};
 
 function env(name: string, fallback: string) {
   return process.env[name] || fallback;
 }
+
+function resolveNetwork(): ChainNetwork {
+  const raw = (
+    process.env.CHAIN_NETWORK ||
+    process.env.NEXT_PUBLIC_CHAIN_NETWORK ||
+    "eip155:421614"
+  ).trim() as ChainNetwork;
+  return raw in CHAIN_PRESETS ? raw : "eip155:421614";
+}
+
+const network = resolveNetwork();
+const preset = CHAIN_PRESETS[network];
 
 function normalizePrivateKey(
   raw: string | undefined,
@@ -20,34 +67,48 @@ function normalizePrivateKey(
 }
 
 export const config = {
-  rpcUrl: env("XLAYER_RPC_URL", "https://testrpc.xlayer.tech/terigon"),
-  network: env("XLAYER_NETWORK", "eip155:1952") as ChainNetwork,
-  /** CAIP-2 chain id number (1952 testnet / 196 mainnet). */
+  rpcUrl: env("RPC_URL", preset.rpcUrl),
+  network,
+  chainLabel: preset.label,
+  nativeSymbol: preset.nativeSymbol,
+  /** CAIP-2 chain id number (421614 Arbitrum Sepolia / 42161 Arbitrum One). */
   get chainId() {
-    const n = this.network.split(":")[1];
-    return Number(n) || 1952;
+    return Number(this.network.split(":")[1]);
   },
-  tokenAddress: env("TOKEN_ADDRESS", USDT0_TESTNET),
-  tokenSymbol: env("TOKEN_SYMBOL", "USDT0"),
+  get isTestnet() {
+    return this.chainId === 421614;
+  },
+  tokenAddress: env("TOKEN_ADDRESS", preset.token),
+  tokenSymbol: env("TOKEN_SYMBOL", preset.tokenSymbol),
   tokenDecimals: Number(env("TOKEN_DECIMALS", "6")),
+  tokenEip712Name: env("TOKEN_EIP712_NAME", preset.tokenEip712Name),
+  tokenEip712Version: env("TOKEN_EIP712_VERSION", preset.tokenEip712Version),
   /**
    * Optional second settle asset for multi-merchant demos (full build).
-   * Defaults to USDT0 so testnet demos still work; set ALT_SETTLE_TOKEN to a
-   * different EIP-3009 ERC-20 when you have liquidity for that asset.
+   * Defaults to the primary settle token; set ALT_SETTLE_TOKEN to a different
+   * EIP-3009 ERC-20 when you have liquidity for that asset.
    */
-  altSettleToken: env("ALT_SETTLE_TOKEN", USDT0_TESTNET),
-  altSettleSymbol: env("ALT_SETTLE_SYMBOL", "USDT0"),
+  altSettleToken: env("ALT_SETTLE_TOKEN", preset.token),
+  altSettleSymbol: env("ALT_SETTLE_SYMBOL", preset.tokenSymbol),
   /**
-   * OKX DEX lists no USDT0 liquidity on X Layer Testnet (1952). When settling on
-   * testnet, show a live quote from X Layer mainnet (196) instead. Quote only:
-   * swaps are never broadcast from a mainnet preview. Set to 0 to disable.
+   * Uniswap has no real liquidity on Arbitrum Sepolia. When settling there,
+   * show a live quote from Arbitrum One instead. Quote only: swaps are never
+   * broadcast from a mainnet preview. Set DEX_MAINNET_PREVIEW=0 to disable.
    */
   get dexMainnetPreview() {
-    return this.chainId !== 196 && process.env.OKX_DEX_MAINNET_PREVIEW !== "0";
+    return this.isTestnet && process.env.DEX_MAINNET_PREVIEW !== "0";
   },
-  dexPreviewChainIndex: "196",
-  dexPreviewTokenAddress: USDT0_MAINNET,
-  /** Demo unit price in USDT0 on X Layer. */
+  /**
+   * Relayer that submits transferWithAuthorization on Arbitrum (pays gas in
+   * ETH). Falls back to the buyer key so a single funded wallet can demo.
+   */
+  get facilitatorPrivateKey() {
+    return (
+      normalizePrivateKey(process.env.FACILITATOR_PRIVATE_KEY) ||
+      this.buyerPrivateKey
+    );
+  },
+  /** Demo unit price in the settle stablecoin. */
   demoUnitPriceXsgd: "0.01",
   merchantAddress: env(
     "MERCHANT_ADDRESS",
@@ -55,22 +116,13 @@ export const config = {
   ),
   /** Buyer EVM private key for server-side x402 settle. */
   get buyerPrivateKey() {
-    return normalizePrivateKey(
-      process.env.BUYER_PRIVATE_KEY || process.env.XLAYER_BUYER_PRIVATE_KEY,
-    );
+    return normalizePrivateKey(process.env.BUYER_PRIVATE_KEY);
   },
   /** @deprecated Alias — prefer buyerPrivateKey. */
   get buyerSeed() {
     return this.buyerPrivateKey;
   },
-  okxApiKey: env("OKX_API_KEY", ""),
-  okxSecretKey: env("OKX_SECRET_KEY", ""),
-  okxPassphrase: env("OKX_PASSPHRASE", ""),
-  okxBaseUrl: env("OKX_BASE_URL", "https://web3.okx.com"),
-  explorerBase: env(
-    "EXPLORER_BASE",
-    "https://www.okx.com/web3/explorer/xlayer-test",
-  ),
+  explorerBase: env("EXPLORER_BASE", preset.explorerBase),
   /** Optional legacy Card MCP URL — unused when empty; Visa rail uses local mandate. */
   straitsxMcpUrl: env("STRAITSX_MCP_URL", ""),
   get straitsxMcpToken() {
@@ -95,7 +147,7 @@ export const config = {
   },
   /**
    * Protocol micro-fee in basis points (app-layer XPoints accrual).
-   * Merchant still receives full listed USDT0 via x402.
+   * Merchant still receives the full listed amount via x402.
    */
   protocolFeeBps: Number(env("PROTOCOL_FEE_BPS", "50")),
   /** Optional treasury address for fee narrative / future on-chain splits. */
@@ -110,7 +162,7 @@ export function explorerTx(hash: string) {
   return `${base}/tx/${hash}`;
 }
 
-/** Decimal USDT0 amount string for display / locked quotes. */
+/** Decimal stablecoin amount string for display / locked quotes. */
 export function toPaymentAmount(price: string, quantity = 1) {
   const n = Number(price) * quantity;
   if (!Number.isFinite(n) || n <= 0) {

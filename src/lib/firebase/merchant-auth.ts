@@ -23,11 +23,11 @@ export type VisaReceiveAccount = {
  * Complements buyer spend governance — this is what the store will accept.
  */
 export type MerchantGovernance = {
-  /** Accept USDT0 / x402 settlements on X Layer */
+  /** Accept USDC / x402 settlements on Arbitrum */
   acceptUsdc: boolean;
   /** Accept Visa scoped-card rail */
   acceptVisa: boolean;
-  /** Floor unit price agents must respect (USDT0) */
+  /** Floor unit price agents must respect (USDC) */
   minUnitPriceUsdc: number | null;
   /** Cap quantity per agent checkout */
   maxUnitsPerOrder: number | null;
@@ -50,7 +50,7 @@ export const DEFAULT_MERCHANT_GOVERNANCE: MerchantGovernance = {
 export type MerchantProfile = {
   displayName: string;
   email: string;
-  /** X Layer classic r… receive address */
+  /** Arbitrum EVM receive address */
   walletAddress?: string;
   visaReceive?: VisaReceiveAccount;
   governance?: MerchantGovernance;
@@ -362,7 +362,7 @@ export async function clearMerchantOnboardingDraft(uid: string): Promise<void> {
 }
 
 export function merchantReceivingComplete(profile: MerchantProfile | null) {
-  // X Layer payTo can fall back to MERCHANT_ADDRESS env — Visa label is the hard gate.
+  // Arbitrum payTo can fall back to MERCHANT_ADDRESS env — Visa label is the hard gate.
   return Boolean(profile?.visaReceive?.accountLabel);
 }
 

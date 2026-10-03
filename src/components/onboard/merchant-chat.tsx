@@ -128,7 +128,7 @@ export function MerchantChat({
               </p>
               <p className="mt-2 max-w-[40ch] text-sm text-foreground/55">
                 Apparel, accessories, shoes — describe stock, import a CSV, or
-                paste a Shopify URL. Then set USDT0 prices and publish.
+                paste a Shopify URL. Then set USDC prices and publish.
               </p>
             </div>
           ) : null}
@@ -263,7 +263,7 @@ export function MerchantChat({
                       ? "Import CSV"
                       : mode === "url"
                         ? "Store URL"
-                        : "Connect X Layer wallet"}
+                        : "Connect Arbitrum wallet"}
                 </p>
               </div>
 
@@ -472,7 +472,7 @@ export function PriceDraftForm({
         Edit inventory
       </p>
       <p className="mt-0.5 text-xs text-foreground/50">
-        Subcategory, size/color (and other axes), qty, and USDT0 price — all
+        Subcategory, size/color (and other axes), qty, and USDC price — all
         required before publish.
         {!walletReady ? (
           <>

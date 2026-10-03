@@ -9,7 +9,7 @@ export const runtime = "nodejs";
 
 const SYSTEM = `You parse buyer spend-governance rules from natural language into JSON.
 Only set fields you are confident about. Omit or null fields that were not mentioned.
-Amounts are unitless demo currency (treat as USDT0-equivalent numbers).
+Amounts are unitless demo currency (treat as USDC-equivalent numbers).
 Respond ONLY with JSON:
 {"summary":"short plain-English restatement","policy":{"maxPerTransaction":number|null,"maxPerDay":number|null,"maxPerWeek":number|null,"maxPurchasesPerHour":number|null,"maxPurchasesPerDay":number|null}}`;
 

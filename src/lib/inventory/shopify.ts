@@ -337,7 +337,7 @@ export async function importShopifyStore(
       description:
         description ||
         (retailSgd
-          ? `Retail ~${retailSgd} SGD (USD→SGD); demo price ${config.demoUnitPriceXsgd} USDT0`
+          ? `Retail ~${retailSgd} SGD (USD→SGD); demo price ${config.demoUnitPriceXsgd} USDC`
           : undefined),
       price: config.demoUnitPriceXsgd,
       fashion: Object.keys(variantAttrs).length

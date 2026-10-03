@@ -11,7 +11,7 @@ export type SkuAttrs = {
 export type SkuTokenization = {
   /** e.g. rwa | tokenized-equity | fractional-claim | meme */
   kind: "rwa" | "tokenized-equity" | "fractional-claim" | "meme";
-  /** On-chain contract on X Layer (demo or live). */
+  /** On-chain contract on Arbitrum (demo or live). */
   contractAddress: string;
   /** Human label for the underlying claim. */
   underlying?: string;
@@ -19,10 +19,10 @@ export type SkuTokenization = {
 };
 
 /**
- * Merchant-facing quote unit (display). Settlement may still be USDT0
+ * Merchant-facing quote unit (display). Settlement may still be USDC
  * (hackathon-safe) or a different ERC-20 via settleAsset (full multi-asset).
  */
-export type QuoteCurrency = "USDT0" | "USD" | "OKB" | "WETH" | "ETH" | string;
+export type QuoteCurrency = "USDC" | "USD" | "ARB" | "WETH" | "ETH" | string;
 
 export type Sku = {
   id: string;
@@ -30,7 +30,7 @@ export type Sku = {
   description: string;
   quantity: number;
   /**
-   * Settlement amount in settleSymbol units (usually USDT0 decimals).
+   * Settlement amount in settleSymbol units (usually USDC decimals).
    * This is what x402 charges after any DEX route.
    */
   price: string;
@@ -39,15 +39,15 @@ export type Sku = {
   /** Optional display price in quoteCurrency (e.g. "0.000012" WETH). */
   quotePrice?: string;
   /**
-   * ERC-20 settle asset for x402 (defaults to network USDT0).
-   * When different from USDT0, buyer routes liquidity into this asset first.
+   * ERC-20 settle asset for x402 (defaults to network USDC).
+   * When different from USDC, buyer routes liquidity into this asset first.
    */
   settleAsset?: string;
-  /** Symbol for settleAsset (defaults to USDT0). */
+  /** Symbol for settleAsset (defaults to USDC). */
   settleSymbol?: string;
   /** Structured fashion facets for catalog + search (optional). */
   attrs?: SkuAttrs;
-  /** Tokenized / RWA metadata for Build a Market track demos. */
+  /** Tokenized / RWA metadata for agentic-commerce demos. */
   tokenization?: SkuTokenization;
 };
 
@@ -64,7 +64,7 @@ export type StoreRecord = {
   /** Firebase merchant uid that owns this store. */
   ownerUid?: string;
   merchantDisplayName?: string;
-  /** Crypto receiving wallet (x402 payTo) — EVM 0x… address on X Layer. */
+  /** Crypto receiving wallet (x402 payTo) — EVM 0x… address on Arbitrum. */
   merchantAddress: string;
   /** Visa/fiat receiving account snapshot for card rail settlement display. */
   visaReceive?: StoreVisaReceive;

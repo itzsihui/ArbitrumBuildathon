@@ -72,7 +72,7 @@ export function ProductPicker({
                 </p>
                 <p className="mt-auto pt-2 text-sm font-medium">
                   {product.price}{" "}
-                  <span className="text-foreground/50">USDT0</span>
+                  <span className="text-foreground/50">USDC</span>
                 </p>
               </div>
             </button>

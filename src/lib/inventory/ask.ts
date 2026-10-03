@@ -59,7 +59,7 @@ export function deterministicInventoryAnswer(
 
   if (/value|worth|total\s*(usdc|price)|revenue|list\s*value/.test(q)) {
     if (pricedSkus === 0) {
-      return `No prices set yet — can't compute list value. Fill USDT0 on each row (${rows.length} SKU${rows.length === 1 ? "" : "s"}, ${totalUnits} units).`;
+      return `No prices set yet — can't compute list value. Fill USDC on each row (${rows.length} SKU${rows.length === 1 ? "" : "s"}, ${totalUnits} units).`;
     }
     if (incomplete.length) {
       return `Priced list value: ${pricedValue.toFixed(2)} ${config.tokenSymbol} across ${pricedSkus}/${rows.length} SKUs (${totalUnits} units). ${incomplete.length} row(s) still need a price.`;

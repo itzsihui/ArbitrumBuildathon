@@ -38,9 +38,9 @@ type RoutePreview = {
     priceImpact?: string;
   };
   balances?: {
-    usdt0Human?: string;
+    tokenHuman?: string;
     nativeHuman?: string;
-    hasEnoughUsdt0?: boolean;
+    hasEnoughToken?: boolean;
   };
 };
 
@@ -134,15 +134,15 @@ export function LiquidityMapPanel({
         </p>
         <p className="mt-1">
           Settlement total:{" "}
-          <strong>{totals.total.toFixed(2)} USDT0-eq</strong>
+          <strong>{totals.total.toFixed(2)} USDC-eq</strong>
           {multiQuote ? " · mixed merchant quote currencies" : null}
           {multiAsset ? " · multi-asset settle rails" : null}
         </p>
         {route?.balances ? (
           <p className="mt-1 text-xs text-foreground/55">
-            Wallet: {route.balances.usdt0Human ?? "—"} settle-token ·{" "}
-            {route.balances.nativeHuman ?? "—"} OKB
-            {route.balances.hasEnoughUsdt0
+            Wallet: {route.balances.tokenHuman ?? "—"} settle-token ·{" "}
+            {route.balances.nativeHuman ?? "—"} ETH
+            {route.balances.hasEnoughToken
               ? " (covers)"
               : " (will route if short)"}
           </p>
@@ -167,14 +167,14 @@ export function LiquidityMapPanel({
               <div className="font-mono text-[11px] text-foreground/70">
                 <p>
                   {route.quote.mode === "live"
-                    ? "Live route (OKX DEX, X Layer)"
+                    ? "Live route (Uniswap V3, Arbitrum One)"
                     : route.quote.mode === "mainnet-preview"
-                      ? "Live OKX DEX quote on X Layer mainnet (196), quote only"
+                      ? "Live Uniswap V3 quote on Arbitrum One (42161), quote only"
                       : "Plan only (no DEX liquidity on this network)"}
                 </p>
                 {route.quote.mode === "mainnet-preview" ? (
                   <p className="mt-0.5 text-foreground/55">
-                    Settlement (x402 USDT0) runs on X Layer Testnet (1952). This
+                    Settlement (x402 USDC) runs on Arbitrum Sepolia (421614). This
                     quote is never executed.
                   </p>
                 ) : null}

@@ -1,14 +1,13 @@
 import { privateKeyToAccount } from "viem/accounts";
-import { x402Client } from "@okxweb3/x402-core/client";
-import { encodePaymentSignatureHeader } from "@okxweb3/x402-core/http";
-import type {
-  PaymentRequired,
-  PaymentRequirements,
-} from "@okxweb3/x402-core/types";
-import { ExactEvmScheme } from "@okxweb3/x402-evm/exact/client";
+import {
+  createPaymentPayload,
+  encodePaymentSignatureHeader,
+  type PaymentRequired,
+  type PaymentRequirements,
+} from "@/lib/protocol/x402-evm";
 import { resolveBuyerTarget } from "@/lib/agents/discover";
 import { config, explorerTx, toAtomic, toPaymentAmount } from "@/lib/config";
-import { ensureUsdt0Liquidity } from "@/lib/liquidity/route";
+import { ensureSettleLiquidity } from "@/lib/liquidity/route";
 import { emit } from "@/lib/protocol/events";
 
 export type BuyerStep = {
@@ -44,7 +43,7 @@ export type PayQuote = {
 export { extractRequestedProduct } from "@/lib/agents/discover";
 
 /**
- * Deterministic x402 handshake on X Layer (USDT0).
+ * Deterministic x402 handshake on Arbitrum (USDC).
  * Prefer a locked quote (slug+skuId+price). Fuzzy message/product matching
  * remains only for legacy demo paths without a quote.
  */
@@ -143,12 +142,12 @@ export async function payX402Tool(args: {
 
   steps.push({
     type: "info",
-    text: `Routing liquidity on X Layer (${settleSymbol} balance → OKX DEX if short)`,
+    text: `Routing liquidity on Arbitrum (${settleSymbol} balance → Uniswap V3 if short)`,
   });
   let routeSwapTx: string | undefined;
   let routeSummary: string | undefined;
   try {
-    const route = await ensureUsdt0Liquidity({
+    const route = await ensureSettleLiquidity({
       price: expectedPrice,
       quantity: 1,
       execute: true,
@@ -158,7 +157,7 @@ export async function payX402Tool(args: {
     if (route.balances) {
       steps.push({
         type: "chain",
-        text: `Wallet ${route.balances.address.slice(0, 8)}… · ${settleSymbol} ${route.balances.usdt0Human} · native ${route.balances.nativeHuman}`,
+        text: `Wallet ${route.balances.address.slice(0, 8)}… · ${settleSymbol} ${route.balances.tokenHuman} · native ${route.balances.nativeHuman}`,
       });
     }
     if (route.quote) {
@@ -167,7 +166,7 @@ export async function payX402Tool(args: {
         route.quote.mode === "live"
           ? "Live route"
           : route.quote.mode === "mainnet-preview"
-            ? "Live OKX DEX quote on X Layer mainnet (quote only, not executed)"
+            ? "Live Uniswap V3 quote on Arbitrum One (quote only, not executed)"
             : "Plan only (no DEX liquidity on this network)";
       steps.push({
         type: route.quote.mode === "plan" ? "info" : "chain",
@@ -176,7 +175,7 @@ export async function payX402Tool(args: {
       if (route.quote.mode === "mainnet-preview") {
         steps.push({
           type: "info",
-          text: `Settlement network: X Layer ${config.chainId === 196 ? "mainnet (196)" : "Testnet (" + config.chainId + ")"}`,
+          text: `Settlement network: ${config.chainLabel} (${config.chainId})`,
         });
       }
     }
@@ -258,11 +257,11 @@ export async function payX402Tool(args: {
       store: slug,
       orderId,
       rail: "x402",
-      message: "402 unpaid: BUYER_PRIVATE_KEY missing, cannot sign on X Layer",
+      message: "402 unpaid: BUYER_PRIVATE_KEY missing, cannot sign on Arbitrum",
     });
     steps.push({
       type: "error",
-      text: `402 is the challenge. Add BUYER_PRIVATE_KEY + funded ${config.tokenSymbol} on X Layer (${config.network}), then Buy again.`,
+      text: `402 is the challenge. Add BUYER_PRIVATE_KEY + funded ${config.tokenSymbol} on Arbitrum (${config.network}), then Buy again.`,
     });
     return { steps, receipt: challenge as BuyerReceipt };
   }
@@ -276,11 +275,7 @@ export async function payX402Tool(args: {
 
   let paymentHeader: string;
   try {
-    const client = new x402Client().register(
-      config.network,
-      new ExactEvmScheme(account, { rpcUrl: config.rpcUrl }),
-    );
-    const payload = await client.createPaymentPayload(challenge);
+    const payload = await createPaymentPayload(account, challenge);
     paymentHeader = encodePaymentSignatureHeader(payload);
   } catch (error) {
     const reason = error instanceof Error ? error.message : "sign failed";

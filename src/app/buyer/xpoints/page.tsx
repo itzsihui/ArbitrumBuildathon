@@ -44,9 +44,9 @@ export default function BuyerXPointsPage() {
           XPoints
         </h1>
         <p className="text-sm leading-relaxed text-foreground/60">
-          Every USDT0 purchase earns XPoints from Borneo&apos;s protocol
+          Every USDC purchase earns XPoints from Borneo&apos;s protocol
           micro-fee. Invite friends — they get a boost, and the loop grows
-          switching incentives without leaving X Layer.
+          switching incentives without leaving Arbitrum.
         </p>
       </header>
 
@@ -62,7 +62,7 @@ export default function BuyerXPointsPage() {
         </p>
         <p className="mt-2 text-xs text-foreground/50">
           Demo rewards ledger — not a token or a security. Merchant still
-          receives full listed USDT0.
+          receives full listed USDC.
         </p>
       </section>
 
@@ -95,7 +95,7 @@ export default function BuyerXPointsPage() {
         <h2 className="text-sm font-medium">Earnings</h2>
         {state.accruals.length === 0 ? (
           <p className="text-sm text-foreground/50">
-            No XPoints yet — complete a USDT0 purchase in Shop to start
+            No XPoints yet — complete a USDC purchase in Shop to start
             earning.
           </p>
         ) : (

@@ -7,7 +7,7 @@ export const runtime = "nodejs";
 
 /**
  * One-click AgentiX lifecycle for judges:
- * onboard → X Layer x402 → VISA card rail.
+ * onboard → Arbitrum x402 → VISA card rail.
  */
 export async function POST(request: Request) {
   const body = (await request.json().catch(() => ({}))) as {
@@ -28,7 +28,7 @@ export async function POST(request: Request) {
 
   log.push({
     phase: "pitch",
-    text: "Intent → route → settle → earn on X Layer (Build a Market)",
+    text: "Intent → route → settle → earn on Arbitrum",
   });
   log.push({ phase: "merchant", text: merchantMessage });
   const merchant = await runMerchantAgent({ message: merchantMessage });
@@ -52,7 +52,7 @@ export async function POST(request: Request) {
   if (rails.includes("x402")) {
     log.push({
       phase: "route",
-      text: "Liquidity: check USDT0 → OKX DEX native→USDT0 if short → then x402",
+      text: "Liquidity: check USDC → Uniswap V3 ETH→USDC if short → then x402",
     });
     log.push({ phase: "x402", text: buyerMessage });
     x402 = await runBuyerAgent({ origin, message: buyerMessage });
@@ -93,11 +93,11 @@ export async function POST(request: Request) {
   return Response.json({
     ok: true,
     pitch: {
-      xlayer:
-        "Intent → liquidity route → HTTP 402 → USDT0 on X Layer → XPoints",
+      arbitrum:
+        "Intent → liquidity route → HTTP 402 → USDC on Arbitrum → XPoints",
       straitsx: "Scoped virtual card mandate → checkout → burn",
       aws: "Bedrock agents + API Gateway/Lambda/DynamoDB protocol slice",
-      okx: "OKX DEX quote + FacilitatorClient verify/settle on X Layer",
+      routing: "Uniswap V3 quote on Arbitrum One + in-process x402 facilitator settling USDC on Arbitrum",
     },
     merchant,
     x402,

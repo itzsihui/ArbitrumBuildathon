@@ -33,7 +33,7 @@ const OPEN_STEPS = [
   { label: "Publish", mono: "registry · llms.txt" },
   { label: "Discover", mono: "GET /api/search" },
   { label: "Any HTTP agent", mono: "procurement · local · personal" },
-  { label: "Settle", mono: "USDT0 · x402 · POST /buy" },
+  { label: "Settle", mono: "USDC · x402 · POST /buy" },
 ] as const;
 
 function FlowStep({
@@ -184,7 +184,7 @@ export function LandingCompareFlow() {
               <span className="font-mono text-[var(--landing-ember)]">
                 /api/search
               </span>{" "}
-              and settle USDT0 via x402.
+              and settle USDC via x402.
             </p>
           </Reveal>
 

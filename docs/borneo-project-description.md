@@ -7,12 +7,22 @@ pdf_options:
 
 # Borneo — Project Description
 
-**Two-sided agentic commerce:** merchants publish agent-ready catalogs; buyers discover and pay in one chat — with **Visa-scoped cards** and **USDT0 on X Layer**, secured by a **CaMeL-shaped** settle lock against prompt injection.
+**Two-sided agentic commerce:** merchants publish agent-ready catalogs; buyers discover and pay in one chat — with **Visa-scoped cards** and **USDC on Arbitrum**, secured by a **CaMeL-shaped** settle lock against prompt injection.
 
 | | |
 |---|---|
 | **Team / Project** | Borneo |
 | **One-liner** | Agents that shop. Merchants that get paid. Catalog text that cannot steal the money. |
+
+---
+
+## Short answer (300 characters)
+
+Borneo is an AI shopping agent on Arbitrum. Fragmented assets mean manual swaps, and agent catalogs are walled off. Buyers chat their intent; Borneo finds items in an open registry, routes liquidity, and settles USDC via x402. CaMeL-style locked quotes stop prompt injection from redirecting funds.
+
+## Summary
+
+**Borneo** is an AI shopping agent that turns intent into a settled payment on-chain. Users hold fragmented assets, so buying products, tokenized real-world assets (RWAs), or making micro-payments usually means manual swaps across separate payment rails. Agent-readable catalogs are also often walled inside a few chat apps, and once an agent can spend money, prompt injection hidden in product listings becomes a real way to steal funds. Borneo fixes this with one flow: intent, route, settle. A buyer describes what they want in natural language, and a salesperson agent searches an open registry of merchant storefronts that any HTTP agent can read (`llms.txt` and `catalog.json`, no scraping). Borneo then previews a liquidity route that converts what the buyer holds into the settlement stablecoin through a DEX, and settles the purchase in USDC on Arbitrum via x402. For security, Borneo follows CaMeL (Capabilities for Machine Learning), a design from Google DeepMind and ETH Zurich. Catalog text is quarantined and flagged when it looks like an injection attempt, and the payment step only accepts a locked quote (store, item, price, merchant address). Because product text never reaches the payment step, a malicious listing can't change who gets paid or how much.
 
 ---
 
@@ -33,7 +43,7 @@ Prompt injection is widely recognized as one of the largest unsolved problems fo
 **Borneo** is a two-sided network:
 
 - **Merchant side** — Conversational onboard (chat / CSV / URL) → bind Visa receive + wallet → publish agent-discoverable storefronts.
-- **Buyer side** — Fashion salesperson chat discovers **live** multi-merchant SKUs, builds a set/cart, and settles **in the same conversation** via Visa or USDT0 on X Layer.
+- **Buyer side** — Fashion salesperson chat discovers **live** multi-merchant SKUs, builds a set/cart, and settles **in the same conversation** via Visa or USDC on Arbitrum.
 
 Security is not a warning banner. Inspired by Google DeepMind / ETH Zurich **CaMeL** (*Capabilities for Machine Learning* — [arXiv:2503.18813](https://arxiv.org/abs/2503.18813)), Borneo applies a **CaMeL-shaped control-flow lock** at settle:
 
@@ -59,7 +69,8 @@ Borneo productizes that principle for commerce: **untrusted catalog data must no
 | **Buyer salesperson chat** | Intent → multi-query catalog search → ranked live SKUs (not a hardcoded aisle). |
 | **Build your set / cart** | Add multiple pieces; pay cart in chat; each SKU settles on its own locked quote. |
 | **Visa-scoped checkout** | Spend cap, merchant scope, authorize-first virtual card flow in chat. |
-| **Visa-powered stablecoin rail** | USDT0 settle via **HTTP 402 / x402** on X Layer (OKX facilitator). |
+| **Visa-powered stablecoin rail** | USDC settle via **HTTP 402 / x402** on Arbitrum (in-process x402 facilitator). |
+| **Liquidity route preview** | Shows a DEX route from what the buyer holds into the settle stablecoin before checkout. |
 | **Merchant agent onboard** | Inventory talk / CSV / URL → published store with agent discovery files. |
 | **Agent storefront protocol** | Agents read `/llms.txt`, `/registry.json`, `/s/{slug}/catalog.json` — **no HTML scrape**. |
 | **CaMeL-shaped quarantine + locked quotes** | Injection demo (e.g. hostile tee) flagged; settle still locks payee/amount. |
@@ -75,7 +86,7 @@ Borneo productizes that principle for commerce: **untrusted catalog data must no
 | App | Next.js, React, TypeScript, Tailwind CSS, Motion |
 | Agents | OpenAI (salesperson + merchant); deterministic tool fallbacks without keys |
 | Auth / data | Firebase Auth + Firestore profiles |
-| Payments | Visa-scoped card flow (fiat-first); USDT0 on X Layer via **@okxweb3/x402-*** + **viem** |
+| Payments | Visa-scoped card flow (fiat-first); USDC on Arbitrum via x402 (EIP-3009) + **viem** |
 | Protocol | Hono-style agent endpoints; machine catalogs for discovery |
 | Security model | CaMeL-inspired quarantine reader + locked-quote settle (AgentDojo-validated design pattern) |
 | Other | Zod, MetaMask (merchant bind), local/session persistence for demo reliability |
@@ -100,7 +111,7 @@ A fashion marketplace where AI buyers shop in chat and merchants publish once fo
 ## 6. Additional Information
 
 **Try the flows**
-- `/buyer` — Shop chat → discover → Visa or USDT0  
+- `/buyer` — Shop chat → discover → Visa or USDC  
 - Merchant onboard — inventory → publish store  
 - `/market` — browse as human or agent  
 - Seed stores under `/s/{slug}/llms.txt`

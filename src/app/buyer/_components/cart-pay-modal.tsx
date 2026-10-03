@@ -67,11 +67,11 @@ export function CartPayModal({
         <div className="overflow-y-auto px-5 py-4">
           <ul className="space-y-2">
             {lines.map((line) => {
-              const quoteCur = line.quoteCurrency || "USDT0";
+              const quoteCur = line.quoteCurrency || "USDC";
               const quotePx = line.quotePrice || line.price;
               const showConvert =
                 quoteCur.toUpperCase() !==
-                (line.settleSymbol || "USDT0").toUpperCase();
+                (line.settleSymbol || "USDC").toUpperCase();
               return (
                 <li
                   key={line.id}
@@ -101,7 +101,7 @@ export function CartPayModal({
                   </div>
                   <p className="shrink-0 text-right text-sm font-medium tabular-nums">
                     {(Number(line.price) * line.quantity).toFixed(2)}{" "}
-                    {line.settleSymbol || "USDT0"}
+                    {line.settleSymbol || "USDC"}
                   </p>
                 </li>
               );
@@ -140,7 +140,7 @@ export function CartPayModal({
                     : "border-border hover:border-foreground/40",
                 )}
               >
-                <span className="font-medium">USDT0 · x402</span>
+                <span className="font-medium">USDC · x402</span>
                 <span className="mt-0.5 block text-xs text-foreground/55">
                   Route once · settle each store
                 </span>

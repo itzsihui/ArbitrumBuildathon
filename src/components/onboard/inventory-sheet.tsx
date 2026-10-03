@@ -538,7 +538,7 @@ export function InventorySheet({
             </button>
             {incomplete > 0 ? (
               <p className="text-[11px] text-destructive">
-                Fill required sizes/colors + qty + USDT0 price on {incomplete}{" "}
+                Fill required sizes/colors + qty + USDC price on {incomplete}{" "}
                 row{incomplete === 1 ? "" : "s"}
               </p>
             ) : (

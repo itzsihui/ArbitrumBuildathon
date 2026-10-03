@@ -171,7 +171,7 @@ export default function DashboardPage() {
                   href="/onboard"
                   className="mt-1 inline-block text-xs text-primary hover:underline"
                 >
-                  Bind X Layer wallet on onboard
+                  Bind Arbitrum wallet on onboard
                 </Link>
               )}
             </div>
@@ -203,13 +203,13 @@ export default function DashboardPage() {
               <p className="mt-1 text-foreground/80">
                 Rails:{" "}
                 {[
-                  merchant.profile.governance.acceptUsdc ? "USDT0" : null,
+                  merchant.profile.governance.acceptUsdc ? "USDC" : null,
                   merchant.profile.governance.acceptVisa ? "Visa" : null,
                 ]
                   .filter(Boolean)
                   .join(" · ") || "none"}
                 {merchant.profile.governance.minUnitPriceUsdc != null
-                  ? ` · floor ${merchant.profile.governance.minUnitPriceUsdc} USDT0`
+                  ? ` · floor ${merchant.profile.governance.minUnitPriceUsdc} USDC`
                   : ""}
                 {merchant.profile.governance.maxUnitsPerOrder != null
                   ? ` · max ${merchant.profile.governance.maxUnitsPerOrder}/order`
@@ -285,7 +285,7 @@ export default function DashboardPage() {
                       <TableCell>
                         {order.rail === "straitsx-card"
                           ? "Visa card"
-                          : "x402 X Layer Testnet"}
+                          : "x402 Arbitrum Sepolia"}
                       </TableCell>
                       <TableCell>
                         <Badge
@@ -304,7 +304,7 @@ export default function DashboardPage() {
                             target="_blank"
                             rel="noreferrer"
                           >
-                            X Layer explorer
+                            Arbitrum explorer
                           </a>
                         ) : order.mandate?.cardOpaqueId ? (
                           <span className="font-mono text-xs">

@@ -32,7 +32,7 @@ export function PaymentConsentModal({
   if (!open || !product || !rail) return null;
 
   const isVisa = rail === "visa";
-  const settleSymbol = product.settleSymbol || "USDT0";
+  const settleSymbol = product.settleSymbol || "USDC";
   const quoteCur = product.quoteCurrency || settleSymbol;
   const quotePx = product.quotePrice || product.price;
   const showConvert = quoteCur.toUpperCase() !== settleSymbol.toUpperCase();
@@ -105,7 +105,7 @@ export function PaymentConsentModal({
               <dd className="text-right">
                 {isVisa
                   ? "Visa (agent-authorized card)"
-                  : `${settleSymbol} · X Layer Testnet x402`}
+                  : `${settleSymbol} · Arbitrum Sepolia x402`}
               </dd>
             </div>
             {!isVisa && product.tokenization ? (
@@ -153,7 +153,7 @@ export function PaymentConsentModal({
             ) : (
               <>
                 Intent → route → settle: agent checks balances, routes native →
-                settle asset on X Layer when needed, then x402 PAYMENT-SIGNATURE.
+                settle asset on Arbitrum when needed, then x402 PAYMENT-SIGNATURE.
                 Protocol micro-fee earns you <strong>XPoints</strong> after
                 settle (merchant still receives full listed amount).
               </>

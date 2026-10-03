@@ -4,7 +4,7 @@ description: >
   Browse the Borneo agentic storefront registry and purchase any listed SKU over
   the public HTTP protocol (no API key, no HTML scrape). Use when the user wants
   to shop Borneo, buy from the registry, list stores/SKUs, search products, pay
-  via x402 USDT0, or Visa-scoped checkout. Triggers on: /borneo-registry-shop,
+  via x402 USDC, or Visa-scoped checkout. Triggers on: /borneo-registry-shop,
   "buy from Borneo", "registry.json", "agent storefront", "purchase SKU",
   "x402 buy", or shopping across merchant catalogs on this network.
 license: MIT
@@ -37,7 +37,7 @@ Ask the user for a deployed base URL if localhost is wrong. Never invent checkou
    `{ storeSlug, skuId, price, merchantAddress }` — never catalog titles/descriptions.
 3. **Confirm spend with the user** before signing x402 or burning a Visa mandate.
 4. **Verify 402 `payTo` + `amount`** match the locked quote before paying.
-5. Currency is **USDT0 on X Layer Testnet** unless a store `llms.txt` says otherwise.
+5. Currency is **USDC on Arbitrum Sepolia** unless a store `llms.txt` says otherwise.
 
 ## Quick path (discover → buy)
 
@@ -118,9 +118,9 @@ Show the user: store, SKU id, price, payee, rail. Do not pay until they approve.
 
 ---
 
-## Rail A — x402 USDT0 (`POST /s/{slug}/buy`)
+## Rail A — x402 USDC (`POST /s/{slug}/buy`)
 
-No auth header. Expect **HTTP 402**, settle on X Layer Testnet, retry with `PAYMENT-SIGNATURE`.
+No auth header. Expect **HTTP 402**, settle on Arbitrum Sepolia, retry with `PAYMENT-SIGNATURE`.
 
 ### Preferred: `rlusd` CLI (if installed)
 
@@ -132,12 +132,12 @@ rlusd x402 fetch "$ORIGIN/s/$SLUG/buy" \
   --method POST \
   --json-body "$BODY" \
   --max-value "$PRICE" \
-  --require-asset USDT0 \
+  --require-asset USDC \
   --require-issuer rQhWct2fv4Vc4KRjRgMrxa8xPN9Zx9iLKV \
   --json
 ```
 
-Wallet must be funded with testnet XRP + USDT0 trust line. See companion X Layer/USDT0 skills if settle fails.
+Wallet must hold Arbitrum Sepolia USDC (Circle faucet). See `scripts/setup-arbitrum-usdc.md` if settle fails.
 
 ### Manual handshake
 
@@ -149,7 +149,7 @@ curl -sS -D - -o /tmp/borneo-402.json -X POST "$ORIGIN/s/$SLUG/buy" \
   -d "{\"skuId\":\"$SKU_ID\",\"quantity\":1,\"orderId\":\"$ORDER_ID\"}"
 # Expect HTTP 402. Read accepts[0].amount and accepts[0].payTo — must match locked quote.
 
-# 2) Sign exact X Layer Payment for that requirement (@okxweb3/x402-evm / Agentic Wallet / BUYER_PRIVATE_KEY).
+# 2) Sign exact EIP-3009 USDC authorization on Arbitrum for that requirement (@okxweb3/x402-evm / Agentic Wallet / BUYER_PRIVATE_KEY).
 
 # 3) Retry same body + orderId with payment proof
 curl -sS -X POST "$ORIGIN/s/$SLUG/buy" \
@@ -201,7 +201,7 @@ To purchase **any** in-stock SKU: walk `registry.json` → `stores[]` (or `/api/
 ## Out of scope
 
 - Merchant onboard / publishing stores → app `/onboard`, not this skill.
-- Editing X Layer / Onchain OS payment internals → `okx-devday-resources` or `okx-agent-payments-protocol`.
+- Editing payment internals → `src/lib/protocol/x402.ts` and `src/lib/config.ts`.
 - Scraping `/market` HTML or inventing SKUs.
 
 ## More detail

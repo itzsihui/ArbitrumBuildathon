@@ -12,7 +12,7 @@ import { config } from "@/lib/config";
 
 /** Checksummed EVM address (0x…). */
 export type HexAddress = `0x${string}`;
-/** @deprecated Alias — same as HexAddress after X Layer migration. */
+/** @deprecated Alias — same as HexAddress. */
 export type ClassicAddress = HexAddress;
 
 export type MerchantAuthProof = {
@@ -63,11 +63,11 @@ function buildAuthMessage(address: HexAddress): string {
   return [
     "Borneo — merchant wallet authentication",
     "",
-    "Sign this message to prove you control the payout address for X Layer x402.",
+    `Sign this message to prove you control the payout address for ${config.chainLabel} x402.`,
     "This does not move funds or submit an on-chain transaction.",
     "",
     `Address: ${address}`,
-    `Network: ${config.network} (X Layer)`,
+    `Network: ${config.network} (${config.chainLabel})`,
     `Issued at: ${issuedAt}`,
   ].join("\n");
 }
@@ -208,26 +208,21 @@ export async function verifyMerchantAuth(
   }
 }
 
-/** X Layer Testnet chain params for wallet_addEthereumChain. */
-export const XLAYER_TESTNET = {
-  chainId: 1952,
-  chainIdHex: "0x7a0",
-  chainName: "X Layer Testnet",
-  nativeCurrency: { name: "OKB", symbol: "OKB", decimals: 18 },
-  rpcUrls: ["https://testrpc.xlayer.tech/terigon"],
-  blockExplorerUrls: ["https://www.okx.com/web3/explorer/xlayer-test"],
+/** Arbitrum Sepolia chain params for wallet_addEthereumChain. */
+export const ARBITRUM_SEPOLIA = {
+  chainId: 421614,
+  chainIdHex: "0x66eee",
+  chainName: "Arbitrum Sepolia",
+  nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
+  rpcUrls: ["https://sepolia-rollup.arbitrum.io/rpc"],
+  blockExplorerUrls: ["https://sepolia.arbiscan.io"],
 } as const;
 
-export const XLAYER_MAINNET = {
-  chainId: 196,
-  chainIdHex: "0xc4",
-  chainName: "X Layer",
-  nativeCurrency: { name: "OKB", symbol: "OKB", decimals: 18 },
-  rpcUrls: ["https://rpc.xlayer.tech"],
-  blockExplorerUrls: ["https://www.okx.com/web3/explorer/xlayer"],
+export const ARBITRUM_ONE = {
+  chainId: 42161,
+  chainIdHex: "0xa4b1",
+  chainName: "Arbitrum One",
+  nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
+  rpcUrls: ["https://arb1.arbitrum.io/rpc"],
+  blockExplorerUrls: ["https://arbiscan.io"],
 } as const;
-
-/** @deprecated Use XLAYER_TESTNET */
-export const BASE_SEPOLIA = XLAYER_TESTNET;
-/** @deprecated Use XLAYER_TESTNET */
-export const FUJI = XLAYER_TESTNET;

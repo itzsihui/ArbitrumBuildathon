@@ -40,9 +40,9 @@ If `skuId` is omitted, the server may default to the first SKU — **always send
 Body includes `accepts[]`. Header `PAYMENT-REQUIRED` is base64 JSON (marketplace validates the header). Use the first `exact` requirement:
 
 - `scheme`: `exact`
-- `network`: `eip155:1952` (X Layer Testnet) or `eip155:196` (mainnet)
-- `amount`: atomic USDT0 string (6 decimals; `"10000"` = 0.01)
-- `asset`: USDT0 contract address
+- `network`: `eip155:421614` (Arbitrum Sepolia) or `eip155:42161` (Arbitrum One)
+- `amount`: atomic USDC string (6 decimals; `"10000"` = 0.01)
+- `asset`: USDC contract address
 - `payTo`: merchant EVM `0x…` address
 - `extra.name`: `USD₮0`, `extra.version`: `1`, plus `orderId`
 
@@ -57,11 +57,11 @@ Retry headers: `PAYMENT-SIGNATURE`. Content-Type `application/json`. Same `order
 
 | Field | Typical value |
 | --- | --- |
-| Symbol | USDT0 |
-| Network | `eip155:1952` |
-| Asset | `0x9e29b3aada05bf2d2c827af80bd28dc0b9b4fb0c` |
-| Facilitator | OKX (`OKXFacilitatorClient`) |
-| Explorer | https://www.okx.com/web3/explorer/xlayer-test |
+| Symbol | USDC |
+| Network | `eip155:421614` |
+| Asset | `0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d` |
+| Facilitator | Borneo in-process x402 facilitator (relays `transferWithAuthorization`) |
+| Explorer | https://sepolia.arbiscan.io |
 
 Always prefer values from the live 402 / store `llms.txt` over this table.
 

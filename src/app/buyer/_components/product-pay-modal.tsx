@@ -114,7 +114,7 @@ export function ProductPayModal({
           ) : null}
           <p className="mt-3 text-base font-medium">
             {product.price}{" "}
-            <span className="text-foreground/50">USDT0</span>
+            <span className="text-foreground/50">USDC</span>
           </p>
           {product.description ? (
             <p className="mt-2 text-sm leading-relaxed text-foreground/70">
@@ -159,11 +159,11 @@ export function ProductPayModal({
                       : "border-border hover:border-foreground/40",
                   )}
                 >
-                  <span className="font-medium">USDT0 · x402</span>
+                  <span className="font-medium">USDC · x402</span>
                   <span className="mt-0.5 block text-xs text-foreground/55">
                     {product.merchantAddress
                       ? `To ${product.merchantAddress.slice(0, 6)}…${product.merchantAddress.slice(-4)}`
-                      : "X Layer Testnet stablecoin"}
+                      : "Arbitrum Sepolia stablecoin"}
                   </span>
                 </button>
               </div>
@@ -192,13 +192,13 @@ export function ProductPayModal({
                   <div className="flex justify-between gap-3">
                     <dt className="text-foreground/45">Amount</dt>
                     <dd className="text-right text-foreground">
-                      {product.price} USDT0
+                      {product.price} USDC
                     </dd>
                   </div>
                   <div className="flex justify-between gap-3">
                     <dt className="text-foreground/45">Rail</dt>
                     <dd className="text-right text-foreground">
-                      {isVisa ? "Visa scoped card" : "USDT0 · x402"}
+                      {isVisa ? "Visa scoped card" : "USDC · x402"}
                     </dd>
                   </div>
                   <div className="flex justify-between gap-3">
@@ -222,7 +222,7 @@ export function ProductPayModal({
                     </p>
                   ) : null}
                   Confirm Visa checkout: spend cap ≥{" "}
-                  <strong>{product.price}</strong> USDT0 · merchant receive{" "}
+                  <strong>{product.price}</strong> USDC · merchant receive{" "}
                   <strong>
                     {product.visaReceiveLabel || product.storeSlug}
                   </strong>
@@ -233,8 +233,8 @@ export function ProductPayModal({
                 </>
               ) : (
                 <>
-                  Confirm x402 on X Layer Testnet: transfer{" "}
-                  <strong>{product.price}</strong> USDT0 to merchant crypto
+                  Confirm x402 on Arbitrum Sepolia: transfer{" "}
+                  <strong>{product.price}</strong> USDC to merchant crypto
                   receive{" "}
                   <span className="font-mono text-xs">
                     {product.merchantAddress || "store payTo"}

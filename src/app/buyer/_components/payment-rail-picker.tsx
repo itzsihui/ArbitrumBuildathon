@@ -19,10 +19,10 @@ const RAILS: Array<{
   },
   {
     id: "stablecoin",
-    title: "USDT0 on X Layer Testnet",
+    title: "USDC on Arbitrum Sepolia",
     subtitle: "Stablecoin · x402 handshake",
     detail:
-      "HTTP 402 challenge → on-chain USDT0 transfer on X Layer Testnet → retry with PAYMENT-SIGNATURE — no redirect.",
+      "HTTP 402 challenge → on-chain USDC transfer on Arbitrum Sepolia → retry with PAYMENT-SIGNATURE — no redirect.",
   },
 ];
 

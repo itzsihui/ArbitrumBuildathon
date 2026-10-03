@@ -1,20 +1,16 @@
 import {
-  OKXFacilitatorClient,
-} from "@okxweb3/x402-core";
-import {
-  encodePaymentRequiredHeader,
-  decodePaymentSignatureHeader,
-} from "@okxweb3/x402-core/http";
-import type {
-  PaymentPayload,
-  PaymentRequired,
-  PaymentRequirements,
-} from "@okxweb3/x402-core/types";
-import {
   config,
   explorerTx,
   toAtomic,
 } from "@/lib/config";
+import {
+  ArbitrumFacilitator,
+  decodePaymentSignatureHeader,
+  encodePaymentRequiredHeader,
+  type PaymentPayload,
+  type PaymentRequired,
+  type PaymentRequirements,
+} from "@/lib/protocol/x402-evm";
 import type { Sku, StoreRecord } from "@/lib/store/types";
 
 export type { PaymentRequired, PaymentRequirements, PaymentPayload };
@@ -31,6 +27,8 @@ export function buildPaymentRequired(
   ).toString();
   const asset = (sku.settleAsset || config.tokenAddress).trim();
   const symbol = (sku.settleSymbol || config.tokenSymbol).trim();
+  const isDefaultToken =
+    asset.toLowerCase() === config.tokenAddress.toLowerCase();
   const accept: PaymentRequirements = {
     scheme: "exact",
     network: config.network,
@@ -39,8 +37,8 @@ export function buildPaymentRequired(
     payTo: store.merchantAddress,
     maxTimeoutSeconds: 300,
     extra: {
-      name: symbol === "USDT0" ? "USD₮0" : symbol,
-      version: "1",
+      name: isDefaultToken ? config.tokenEip712Name : symbol,
+      version: isDefaultToken ? config.tokenEip712Version : "1",
       orderId,
       quoteCurrency: sku.quoteCurrency || symbol,
       quotePrice: sku.quotePrice || sku.price,
@@ -74,43 +72,30 @@ export function parsePaymentSignature(header: string): PaymentPayload | null {
   try {
     return decodePaymentSignatureHeader(raw);
   } catch {
-    try {
-      const decoded = JSON.parse(
-        Buffer.from(raw, "base64").toString("utf8"),
-      ) as PaymentPayload;
-      if (decoded?.x402Version && decoded?.payload && decoded?.accepted) {
-        return decoded;
-      }
-    } catch {
-      return null;
-    }
+    return null;
   }
-  return null;
 }
 
-function hasOkxCredentials() {
-  return Boolean(
-    config.okxApiKey && config.okxSecretKey && config.okxPassphrase,
-  );
-}
+let facilitatorInstance: ArbitrumFacilitator | null = null;
 
-function facilitator() {
-  if (!hasOkxCredentials()) {
+function facilitator(): ArbitrumFacilitator {
+  if (facilitatorInstance) return facilitatorInstance;
+  const key = config.facilitatorPrivateKey;
+  if (!key) {
     throw new Error(
-      "OKX facilitator credentials missing. Set OKX_API_KEY, OKX_SECRET_KEY, OKX_PASSPHRASE.",
+      "Facilitator key missing. Set FACILITATOR_PRIVATE_KEY (or BUYER_PRIVATE_KEY) with Arbitrum ETH for gas.",
     );
   }
-  return new OKXFacilitatorClient({
-    apiKey: config.okxApiKey,
-    secretKey: config.okxSecretKey,
-    passphrase: config.okxPassphrase,
-    baseUrl: config.okxBaseUrl,
-    syncSettle: true,
+  facilitatorInstance = new ArbitrumFacilitator({
+    relayerKey: key,
+    network: config.network,
+    rpcUrl: config.rpcUrl,
   });
+  return facilitatorInstance;
 }
 
 /**
- * Verify + settle a signed EVM payment via the OKX facilitator.
+ * Verify + settle a signed EIP-3009 payment on Arbitrum.
  */
 export async function verifyAndSettle(args: {
   paymentHeader: string;
@@ -124,34 +109,16 @@ export async function verifyAndSettle(args: {
       return { ok: false as const, reason: "Invalid PAYMENT-SIGNATURE" };
     }
 
-    const client = facilitator();
-    const verified = await client.verify(payload, args.paymentRequirements);
-    if (!verified.isValid) {
-      return {
-        ok: false as const,
-        reason:
-          verified.invalidReason ||
-          verified.invalidMessage ||
-          "Facilitator rejected payment",
-      };
-    }
-
-    const settled = await client.settle(payload, args.paymentRequirements);
-    if (!settled.success || !settled.transaction) {
-      return {
-        ok: false as const,
-        reason:
-          settled.errorReason ||
-          settled.errorMessage ||
-          "Facilitator settle failed",
-      };
+    const settled = await facilitator().settle(payload, args.paymentRequirements);
+    if (!settled.success) {
+      return { ok: false as const, reason: settled.errorReason };
     }
 
     return {
       ok: true as const,
       txHash: settled.transaction,
       explorerUrl: explorerTx(settled.transaction),
-      payer: settled.payer || undefined,
+      payer: settled.payer,
     };
   } catch (error) {
     const reason =

@@ -5,6 +5,8 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: path.join(__dirname),
   },
+  // ethers v5 (used by @arbitrum/sdk) breaks on Next's patched fetch when bundled.
+  serverExternalPackages: ["@arbitrum/sdk", "ethers"],
   images: {
     // Local only: AVG HTTPS scanning breaks Node's fetch of Unsplash.
     unoptimized: process.env.NODE_ENV === "development",

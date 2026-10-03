@@ -6,12 +6,12 @@ const IMPACT = [
   {
     value: "N",
     label: "Tokens in the wallet",
-    detail: "ETH, OKB, alts — fragmented for commerce",
+    detail: "ETH, ARB, alts — fragmented for commerce",
   },
   {
     value: "1",
-    label: "Settlement asset on X Layer",
-    detail: "USDT0 via x402",
+    label: "Settlement asset on Arbitrum",
+    detail: "USDC via x402",
   },
   {
     value: "+",
@@ -52,11 +52,11 @@ export function LandingProblemImpact() {
             <span className="text-[var(--landing-fog)]/35">→</span> Earn
           </p>
           <p className="mt-5 max-w-[40ch] font-[family-name:var(--font-syne)] text-xl font-medium leading-snug text-[var(--landing-fog)] md:text-2xl">
-            One agent loop on X Layer
+            One agent loop on Arbitrum
           </p>
           <p className="mt-3 max-w-[48ch] text-sm leading-relaxed text-[var(--landing-fog)]/50">
-            Borneo evaluates the wallet, routes liquidity into USDT0, settles
-            with OKX x402, and rewards you with XPoints from the protocol fee —
+            Borneo evaluates the wallet, routes liquidity into USDC, settles
+            with x402 on Arbitrum, and rewards you with XPoints from the protocol fee —
             so switching is seamless and rewarded.
           </p>
         </Reveal>

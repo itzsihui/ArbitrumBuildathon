@@ -135,7 +135,7 @@ export const DEFAULT_ONBOARD_MESSAGE = "";
 export const DEFAULT_ONBOARD_LINES: OnboardSession["lines"] = [
   {
     role: "borneo",
-    text: "I'm your merchant agent — tell me what fashion inventory you're stocking, or pick a chip below to import CSV / Shopify / X Layer wallet.",
+    text: "I'm your merchant agent — tell me what fashion inventory you're stocking, or pick a chip below to import CSV / Shopify / Arbitrum wallet.",
   },
 ];
 

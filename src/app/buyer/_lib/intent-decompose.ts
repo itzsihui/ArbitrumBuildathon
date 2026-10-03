@@ -57,7 +57,7 @@ export function extractBudget(message: string): string | undefined {
     /\b(?:under|below|max|budget)\s*([\d]+(?:\.\d+)?)\s*(xsgd|usd|sgd|rlusd)?/i,
   );
   if (!match) return undefined;
-  const unit = (match[2] || "USDT0").toUpperCase();
+  const unit = (match[2] || "USDC").toUpperCase();
   return `${match[1]} ${unit}`;
 }
 

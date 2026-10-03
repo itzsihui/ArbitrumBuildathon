@@ -58,7 +58,7 @@ export default function OnboardPage() {
   const boundWalletAddress = merchant.profile?.walletAddress ?? null;
   const visaReady = Boolean(merchant.profile?.visaReceive?.accountLabel);
   const visaReceive = merchant.profile?.visaReceive || undefined;
-  /** Visa receive is required; X Layer payTo falls back to MERCHANT_ADDRESS env. */
+  /** Visa receive is required; Arbitrum payTo falls back to MERCHANT_ADDRESS env. */
   const railsReady = visaReady;
 
   useEffect(() => {
@@ -404,7 +404,7 @@ export default function OnboardPage() {
         ...prev,
         {
           role: "borneo",
-          text: "Share a fashion description — e.g. “10 linen shirts, 8 tote bags, 6 sneakers” — and I'll draft the listing, then ask for USDT0 prices.",
+          text: "Share a fashion description — e.g. “10 linen shirts, 8 tote bags, 6 sneakers” — and I'll draft the listing, then ask for USDC prices.",
         },
       ]);
       return;
@@ -423,7 +423,7 @@ export default function OnboardPage() {
       ...prev,
       {
         role: "borneo",
-        text: "Paste a Shopify storefront URL. We’ll pull products, keep USD≈USDT0 suggestions, and ask you to confirm prices.",
+        text: "Paste a Shopify storefront URL. We’ll pull products, keep USD≈USDC suggestions, and ask you to confirm prices.",
       },
     ]);
   }
@@ -491,7 +491,7 @@ export default function OnboardPage() {
       {
         role: "merchant",
         text: nextDraft.lines
-          .map((line, i) => `${line.quantity} ${line.title} @ ${prices[i]} USDT0`)
+          .map((line, i) => `${line.quantity} ${line.title} @ ${prices[i]} USDC`)
           .join(", "),
       },
     ]);

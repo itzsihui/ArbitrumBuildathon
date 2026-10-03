@@ -30,7 +30,7 @@ export type SpendEvent = {
   merchantReceive?: string;
   skuId?: string;
   imageUrl?: string;
-  /** X Layer explorer (or explorer) link for USDT0 / x402 settlements */
+  /** Arbitrum explorer (or explorer) link for USDC / x402 settlements */
   explorerUrl?: string;
   orderId?: string;
   /** Visa mandate proof */
@@ -550,7 +550,7 @@ export function markSpendReviewed(args: {
 }
 
 export function railLabel(rail: SpendEvent["rail"]) {
-  return rail === "x402" ? "USDT0 · x402" : "Visa card";
+  return rail === "x402" ? "USDC · x402" : "Visa card";
 }
 
 export function markCardIssued(args: {

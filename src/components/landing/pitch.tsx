@@ -9,8 +9,8 @@ const BUYER_PLACEHOLDERS = [
   "Buy this limited-edition merch drop",
   "Deploy funds into this tokenized asset",
   "I want a black linen shirt in M",
-  "Route my OKB to USDT0 and settle",
-  "Authorize USDT0 — show me the locked quote",
+  "Route my ETH to USDC and settle",
+  "Authorize USDC — show me the locked quote",
 ];
 
 const SELLER_WORDS =

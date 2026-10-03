@@ -1,6 +1,6 @@
 /**
  * Outfit / multi-merchant settle helpers.
- * Hackathon-safe: merchants quote in mixed units; settle in USDT0 after one DEX route.
+ * Hackathon-safe: merchants quote in mixed units; settle in USDC after one DEX route.
  * Full build: per-SKU settleAsset can target ALT_SETTLE_TOKEN (or any EIP-3009 ERC-20).
  */
 
@@ -17,7 +17,7 @@ export type SettleLine = {
   skuId: string;
   title?: string;
   quantity: number;
-  /** Settlement amount (usually USDT0 human). */
+  /** Settlement amount (usually USDC human). */
   price: string;
   quoteCurrency: string;
   quotePrice: string;
@@ -25,7 +25,7 @@ export type SettleLine = {
   settleSymbol: string;
   /** True when quote currency differs from settle symbol. */
   converts: boolean;
-  /** True when settle asset differs from default USDT0. */
+  /** True when settle asset differs from default USDC. */
   multiAsset: boolean;
 };
 
@@ -94,7 +94,7 @@ export function cartSettlementTotal(lines: SettleLine[]): {
   }
   return {
     total: usdtTotal,
-    totalLabel: `${usdtTotal.toFixed(2)} USDT0-eq`,
+    totalLabel: `${usdtTotal.toFixed(2)} USDC-eq`,
     byAsset: [...byAssetMap.values()],
   };
 }

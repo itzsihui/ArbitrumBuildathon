@@ -8,7 +8,7 @@ import {
 export type { BuyerStep, BuyerReceipt, PayQuote };
 
 /**
- * Settle USDT0 / x402 from a locked quote.
+ * Settle USDC / x402 from a locked quote.
  * When quote is present: no LLM, no product titles — deterministic tool only.
  * Legacy message path kept for /demo scripts without a structured quote.
  */

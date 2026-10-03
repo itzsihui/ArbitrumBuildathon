@@ -82,7 +82,7 @@ export default function MerchantSetupPage() {
       await merchant.bindWallet(proof.address);
       setBoundWallet(proof.address);
       setSeedInput("");
-      setMessage(`X Layer receive bound: ${shortAddress(proof.address)}`);
+      setMessage(`Arbitrum receive bound: ${shortAddress(proof.address)}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Wallet bind failed");
     } finally {
@@ -95,7 +95,7 @@ export default function MerchantSetupPage() {
     setGeneratedSeed(w.privateKey);
     setSeedInput(w.privateKey);
     setMessage(
-      `Generated ${shortAddress(w.address)}. Copy the private key, fund X Layer Testnet OKB + USDT0, then Bind.`,
+      `Generated ${shortAddress(w.address)}. Copy the private key, fund Arbitrum Sepolia ETH + USDC, then Bind.`,
     );
   }
 
@@ -106,7 +106,7 @@ export default function MerchantSetupPage() {
       return;
     }
     if (!acceptUsdc && !acceptVisa) {
-      setError("Enable at least one payment rail (USDT0 or Visa)");
+      setError("Enable at least one payment rail (USDC or Visa)");
       return;
     }
     setBusy(true);
@@ -219,12 +219,12 @@ export default function MerchantSetupPage() {
 
       <form onSubmit={(e) => void onSave(e)} className="mt-8 space-y-10">
         <section className="space-y-3">
-          <h2 className="text-sm font-medium">1. X Layer receiving address</h2>
+          <h2 className="text-sm font-medium">1. Arbitrum receiving address</h2>
           <p className="text-xs text-foreground/55">
             Optional for the demo — skip to use{" "}
             <code className="text-[11px]">MERCHANT_ADDRESS</code> from server
             env. Bind MetaMask or a private key if you want payouts to your own
-            X Layer Testnet wallet (key stays in the browser).
+            Arbitrum Sepolia wallet (key stays in the browser).
           </p>
           {wallet ? (
             <p className="font-mono text-sm">
@@ -260,7 +260,7 @@ export default function MerchantSetupPage() {
               {walletBusy
                 ? "Binding…"
                 : wallet
-                  ? "Re-bind X Layer wallet"
+                  ? "Re-bind Arbitrum wallet"
                   : seedInput.trim()
                     ? "Bind with private key"
                     : "Bind with MetaMask"}
@@ -320,9 +320,9 @@ export default function MerchantSetupPage() {
               onChange={(e) => setAcceptUsdc(e.target.checked)}
             />
             <span>
-              Accept USDT0 (x402)
+              Accept USDC (x402)
               <span className="mt-0.5 block text-xs text-foreground/50">
-                Buyer agents can settle on X Layer Testnet to your EVM address.
+                Buyer agents can settle on Arbitrum Sepolia to your EVM address.
               </span>
             </span>
           </label>
@@ -365,7 +365,7 @@ export default function MerchantSetupPage() {
             <span>
               Require price confirm before publish
               <span className="mt-0.5 block text-xs text-foreground/50">
-                The merchant agent drafts inventory but you approve USDT0 prices
+                The merchant agent drafts inventory but you approve USDC prices
                 before go-live.
               </span>
             </span>
@@ -374,7 +374,7 @@ export default function MerchantSetupPage() {
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-1.5">
               <label htmlFor="minPrice" className="text-xs font-medium">
-                Min unit price (USDT0)
+                Min unit price (USDC)
               </label>
               <Input
                 id="minPrice"
