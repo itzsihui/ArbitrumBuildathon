@@ -1,5 +1,6 @@
 import { privateKeyToAccount } from "viem/accounts";
 import {
+  checkoutOrderNonce,
   createPaymentPayload,
   encodePaymentSignatureHeader,
   type PaymentRequired,
@@ -9,6 +10,59 @@ import { resolveBuyerTarget } from "@/lib/agents/discover";
 import { config, explorerTx, toAtomic, toPaymentAmount } from "@/lib/config";
 import { ensureSettleLiquidity } from "@/lib/liquidity/route";
 import { emit } from "@/lib/protocol/events";
+
+const sameAddress = (a?: string, b?: string) =>
+  !!a && !!b && a.trim().toLowerCase() === b.trim().toLowerCase();
+
+/**
+ * Direct mode: payTo must be the locked merchant. Checkout mode: payTo must be
+ * the trusted BorneoCheckout and the order nonce must bind the locked merchant,
+ * token and amount, so the contract can only pay that merchant.
+ */
+function checkPayTo(
+  accept: PaymentRequirements,
+  expectedMerchant: string,
+): { ok: true; viaCheckout: boolean } | { ok: false; reason: string } {
+  if (accept.extra?.primaryType !== "ReceiveWithAuthorization") {
+    return sameAddress(accept.payTo, expectedMerchant)
+      ? { ok: true, viaCheckout: false }
+      : {
+          ok: false,
+          reason: `402 payTo ${accept.payTo} does not match locked merchant ${expectedMerchant}`,
+        };
+  }
+  const { checkout, merchant, orderKey, nonce } = accept.extra;
+  if (!config.checkoutAddress || !sameAddress(accept.payTo, config.checkoutAddress)) {
+    return {
+      ok: false,
+      reason: `402 payTo ${accept.payTo} is not the trusted BorneoCheckout ${config.checkoutAddress || "(unset)"}`,
+    };
+  }
+  if (!sameAddress(checkout, accept.payTo)) {
+    return { ok: false, reason: "402 extra.checkout does not match payTo" };
+  }
+  if (!sameAddress(merchant, expectedMerchant)) {
+    return {
+      ok: false,
+      reason: `402 merchant ${merchant} does not match locked merchant ${expectedMerchant}`,
+    };
+  }
+  if (!orderKey || !nonce) {
+    return { ok: false, reason: "402 checkout requirement missing orderKey / nonce" };
+  }
+  const expectedNonce = checkoutOrderNonce({
+    chainId: config.chainId,
+    checkout: accept.payTo,
+    orderKey,
+    merchant: expectedMerchant,
+    token: accept.asset,
+    amount: accept.amount,
+  });
+  if (expectedNonce.toLowerCase() !== nonce.toLowerCase()) {
+    return { ok: false, reason: "402 order nonce does not bind the locked merchant / amount" };
+  }
+  return { ok: true, viaCheckout: true };
+}
 
 export type BuyerStep = {
   type: "info" | "http" | "chain" | "error" | "success";
@@ -227,11 +281,9 @@ export async function payX402Tool(args: {
     return { steps };
   }
 
-  if (accept.payTo.trim().toLowerCase() !== expectedPayTo.toLowerCase()) {
-    steps.push({
-      type: "error",
-      text: `Capability check failed: 402 payTo ${accept.payTo} does not match locked merchant ${expectedPayTo}`,
-    });
+  const payToCheck = checkPayTo(accept, expectedPayTo);
+  if (!payToCheck.ok) {
+    steps.push({ type: "error", text: `Capability check failed: ${payToCheck.reason}` });
     return { steps };
   }
 
@@ -245,7 +297,9 @@ export async function payX402Tool(args: {
 
   steps.push({
     type: "info",
-    text: "Capability checks passed: payTo + amount match locked quote",
+    text: payToCheck.viaCheckout
+      ? "Capability checks passed: BorneoCheckout order nonce binds merchant + amount to the locked quote"
+      : "Capability checks passed: payTo + amount match locked quote",
   });
 
   const buyerKey = config.buyerPrivateKey;
@@ -270,7 +324,9 @@ export async function payX402Tool(args: {
 
   steps.push({
     type: "chain",
-    text: `Signing ${config.tokenSymbol} Payment ${accept.amount} atomic → ${accept.payTo} on ${config.network} (${account.address})`,
+    text: `Signing ${String(accept.extra?.settleSymbol || config.tokenSymbol)} ${
+      payToCheck.viaCheckout ? "ReceiveWithAuthorization" : "Payment"
+    } ${accept.amount} atomic → ${accept.payTo} on ${config.network} (${account.address})`,
   });
 
   let paymentHeader: string;

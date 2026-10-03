@@ -41,14 +41,16 @@ Body includes `accepts[]`. Header `PAYMENT-REQUIRED` is base64 JSON (marketplace
 
 - `scheme`: `exact`
 - `network`: `eip155:421614` (Arbitrum Sepolia) or `eip155:42161` (Arbitrum One)
-- `amount`: atomic USDC string (6 decimals; `"10000"` = 0.01)
-- `asset`: USDC contract address
-- `payTo`: merchant EVM `0x…` address
-- `extra.name`: `USD₮0`, `extra.version`: `1`, plus `orderId`
+- `amount`: atomic string (6 decimals; `"10000"` = 0.01)
+- `asset`: USDC or Paxos USDG contract address
+- `payTo`: the BorneoCheckout contract (or the merchant in direct mode)
+- `extra.name` / `extra.version`: token EIP-712 domain (`USD Coin` / `2` for USDC, `Global Dollar` / `1` for USDG), plus `orderId`
+- Checkout mode adds `extra.primaryType: "ReceiveWithAuthorization"`, `extra.checkout`, `extra.merchant`, `extra.orderKey`, `extra.nonce`
 
 Capability check before signing:
 
-- `payTo` === locked `merchantAddress`
+- Checkout mode: `payTo` === the BorneoCheckout address you trust, `extra.merchant` === locked `merchantAddress`, and `extra.nonce` === `keccak256(abi.encode(ORDER_TYPEHASH, chainId, checkout, orderKey, merchant, asset, amount))` (or call `orderNonce` on the contract). Sign `ReceiveWithAuthorization` with that nonce.
+- Direct mode: `payTo` === locked `merchantAddress`. Sign `TransferWithAuthorization` with a random nonce.
 - `amount` === locked `price` × `quantity` in atomic units
 
 Retry headers: `PAYMENT-SIGNATURE`. Content-Type `application/json`. Same `orderId` as the challenge.
@@ -60,7 +62,8 @@ Retry headers: `PAYMENT-SIGNATURE`. Content-Type `application/json`. Same `order
 | Symbol | USDC |
 | Network | `eip155:421614` |
 | Asset | `0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d` |
-| Facilitator | Borneo in-process x402 facilitator (relays `transferWithAuthorization`) |
+| Facilitator | Borneo x402 facilitator (relays `BorneoCheckout.settle`) |
+| Checkout | `0xf8188490C10d0248DBB27bD1A07F8a7b4f0e9fc4` |
 | Explorer | https://sepolia.arbiscan.io |
 
 Always prefer values from the live 402 / store `llms.txt` over this table.
